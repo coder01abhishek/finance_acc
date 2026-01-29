@@ -6,11 +6,20 @@ This is an internal business finance and operations management software built fo
 
 **Key Features:**
 - Transaction management with approval workflows (draft → submitted → approved/rejected)
+- **Multi-currency support with INR as base currency** (USD, EUR, GBP, AED, SGD, AUD, CAD)
 - Multi-account support (Current, Overdraft/CC, Cash, UPI)
 - Client invoicing with line items
 - Financial goals tracking (revenue/expense targets)
 - Dashboard analytics with charts and reports
 - Role-based access control (Admin, HR, Manager, Data Entry)
+
+**Multi-Currency Rules:**
+- Base currency is INR - all accounting, profit/loss, and reports calculated in INR only
+- Other currencies supported for input and display
+- Each transaction stores: originalAmount, originalCurrency, exchangeRateToInr, amountInInr
+- Exchange rates auto-fetched from frankfurter.app API, but can be manually overridden
+- Historical transactions retain their stored exchange rate (no recalculation)
+- All calculations use amountInInr for consistency
 
 **Design Principles:**
 - Extremely simple UI for non-accountants
@@ -60,10 +69,10 @@ The first user to sign up automatically becomes admin. Authentication is handled
 - `users` / `sessions` - Authentication (Replit Auth managed)
 - `appUsers` - Application roles linked to auth users
 - `accounts` - Bank accounts (current, OD/CC, cash, UPI)
-- `transactions` - Financial transactions with approval status
+- `transactions` - Financial transactions with multi-currency support (originalAmount, originalCurrency, exchangeRateToInr, amountInInr)
 - `categories` - Transaction categorization
-- `clients` - Customer records for invoicing
-- `invoices` / `invoiceItems` - Invoice management
+- `clients` - Customer records with preferredCurrency
+- `invoices` / `invoiceItems` - Invoice management with currency support
 - `goals` - Revenue/expense targets
 
 ### Shared Code

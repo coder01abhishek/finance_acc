@@ -1,0 +1,66 @@
+ADD THE FOLLOWING FEATURE TO THE SAME SOFTWARE:
+
+--------------------------------------------------
+MULTI-CURRENCY SUPPORT (INR AS BASE)
+--------------------------------------------------
+
+Business Rule:
+- The company is an Indian agency.
+- Base currency is INR.
+- All accounting, profit/loss, balances, and reports must be calculated ONLY in INR.
+- Other currencies (USD, etc.) are supported only for input and display.
+
+Transaction Currency Logic:
+Each transaction must store:
+- original_amount
+- original_currency (INR, USD, etc.)
+- exchange_rate_to_inr
+- amount_in_inr (calculated & stored)
+
+Rules:
+- If original_currency = INR:
+  - exchange_rate_to_inr = 1
+  - amount_in_inr = original_amount
+- If original_currency ≠ INR:
+  - System should auto-fetch exchange rate using a free public API
+  - Admin can manually override the exchange rate
+  - Converted INR value must be stored permanently
+  - Historical transactions must NOT change if exchange rates change later
+
+Reporting Rules:
+- All calculations (income, expense, profit, balances) use amount_in_inr ONLY
+- Default display currency is INR
+- User can toggle display to USD for viewing purposes
+- Display conversion must use stored exchange rate, not live rate
+
+Opening Balance Rules:
+- Opening balances are always stored in INR only
+- Opening balance never counts as income or expense
+
+Transfers:
+- Transfers between accounts do not trigger currency conversion
+- Transfers do not affect profit or loss
+
+Invoices:
+- Each client can have a preferred invoice currency
+- Invoice currency can be USD or INR
+- Internally, invoice values must still be stored in INR
+- Payment received in foreign currency must convert to INR using rate at payment date
+
+Permissions:
+- Only Admin can:
+  - Edit exchange rates
+  - Change base currency settings
+- Other roles can only view currency values
+
+UI Requirements:
+- Currency selector during transaction entry
+- Clear display of:
+  - Original amount & currency
+  - Converted INR amount
+- No complex forex terminology (keep it simple)
+
+Important Constraints:
+- Do NOT mix multiple currencies in totals
+- Do NOT recalculate historical data using live rates
+- Accuracy and consistency are more important than real-time forex precision

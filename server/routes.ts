@@ -94,6 +94,23 @@ export async function registerRoutes(
     }
   });
 
+  // === EXCHANGE RATES ===
+  app.get("/api/exchange-rate/:currency", isAuthenticated, async (req, res) => {
+    const currency = req.params.currency.toUpperCase();
+    if (currency === "INR") {
+      return res.json({ rate: 1, currency: "INR", base: "INR" });
+    }
+    
+    try {
+      const response = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=INR`);
+      if (!response.ok) throw new Error("Failed to fetch rate");
+      const data = await response.json();
+      res.json({ rate: data.rates.INR, currency, base: "INR" });
+    } catch (err) {
+      res.status(500).json({ message: "Could not fetch exchange rate" });
+    }
+  });
+
   // === TRANSACTIONS ===
   app.get(api.transactions.list.path, isAuthenticated, async (req, res) => {
     const filters = {
@@ -108,11 +125,19 @@ export async function registerRoutes(
 
   app.post(api.transactions.create.path, isAuthenticated, async (req: any, res) => {
     try {
-        // Enforce user
+      const { originalAmount, originalCurrency, exchangeRateToInr } = req.body;
+      
+      const rate = exchangeRateToInr ? parseFloat(exchangeRateToInr) : 1;
+      const amountInInr = parseFloat(originalAmount) * rate;
+      
       const input = api.transactions.create.input.parse({
         ...req.body,
+        originalAmount: originalAmount.toString(),
+        originalCurrency: originalCurrency || "INR",
+        exchangeRateToInr: rate.toString(),
+        amountInInr: amountInInr.toFixed(2),
         createdBy: req.user.claims.sub,
-        date: new Date(req.body.date), // Ensure date object
+        date: new Date(req.body.date),
       });
       const tx = await storage.createTransaction(input);
       res.status(201).json(tx);

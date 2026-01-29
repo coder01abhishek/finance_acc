@@ -23,23 +23,24 @@ export default function ReportsPage() {
     return { value: format(d, "yyyy-MM"), label: format(d, "MMMM yyyy") };
   });
 
-  // Calculate category breakdown
+  // Calculate category breakdown using amountInInr (base currency)
   const categoryBreakdown = categories?.map(cat => {
     const total = transactions
       ?.filter(tx => tx.categoryId === cat.id && tx.type === 'expense')
-      .reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      .reduce((sum, tx) => sum + Number(tx.amountInInr), 0) || 0;
     return { name: cat.name, value: total };
   }).filter(c => c.value > 0) || [];
 
   const incomeBreakdown = categories?.map(cat => {
     const total = transactions
       ?.filter(tx => tx.categoryId === cat.id && tx.type === 'income')
-      .reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      .reduce((sum, tx) => sum + Number(tx.amountInInr), 0) || 0;
     return { name: cat.name, value: total };
   }).filter(c => c.value > 0) || [];
 
-  const totalIncome = transactions?.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
-  const totalExpense = transactions?.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+  // All calculations use amountInInr (base currency INR)
+  const totalIncome = transactions?.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amountInInr), 0) || 0;
+  const totalExpense = transactions?.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amountInInr), 0) || 0;
 
   const summaryData = [
     { name: 'Income', value: totalIncome, fill: '#10b981' },
@@ -74,7 +75,7 @@ export default function ReportsPage() {
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">${totalIncome.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-emerald-600">₹{totalIncome.toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -84,7 +85,7 @@ export default function ReportsPage() {
             <TrendingDown className="h-4 w-4 text-rose-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-rose-600">${totalExpense.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-rose-600">₹{totalExpense.toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -95,7 +96,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {(totalIncome - totalExpense) >= 0 ? '+' : ''}${(totalIncome - totalExpense).toLocaleString()}
+              {(totalIncome - totalExpense) >= 0 ? '+' : ''}₹{(totalIncome - totalExpense).toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -112,9 +113,9 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={summaryData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" tickFormatter={(v) => `$${v.toLocaleString()}`} />
+                  <XAxis type="number" tickFormatter={(v) => `₹${v.toLocaleString()}`} />
                   <YAxis dataKey="name" type="category" width={80} />
-                  <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -145,7 +146,7 @@ export default function ReportsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                    <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -176,16 +177,16 @@ export default function ReportsPage() {
               </thead>
               <tbody className="divide-y">
                 {categories?.map(cat => {
-                  const income = transactions?.filter(tx => tx.categoryId === cat.id && tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
-                  const expense = transactions?.filter(tx => tx.categoryId === cat.id && tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+                  const income = transactions?.filter(tx => tx.categoryId === cat.id && tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amountInInr), 0) || 0;
+                  const expense = transactions?.filter(tx => tx.categoryId === cat.id && tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amountInInr), 0) || 0;
                   if (income === 0 && expense === 0) return null;
                   return (
                     <tr key={cat.id} className="hover:bg-muted/30">
                       <td className="px-4 py-3 font-medium">{cat.name}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600">${income.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right text-rose-600">${expense.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-emerald-600">₹{income.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-rose-600">₹{expense.toLocaleString()}</td>
                       <td className={`px-4 py-3 text-right font-medium ${(income - expense) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        ${(income - expense).toLocaleString()}
+                        ₹{(income - expense).toLocaleString()}
                       </td>
                     </tr>
                   );

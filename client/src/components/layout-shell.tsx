@@ -11,8 +11,7 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X,
-  ArrowRightLeft
+  X
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ const navItems = [
   { href: "/invoices", label: "Invoicing", icon: FileText },
   { href: "/reports", label: "Reports", icon: PieChart },
   { href: "/goals", label: "Goals", icon: Target },
-  { href: "/currency", label: "Currency", icon: ArrowRightLeft },
 ];
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
@@ -83,7 +81,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-4 px-2">
           <Avatar className="h-9 w-9 border border-border">
-            <AvatarImage src={user?.profileImageUrl} />
+            <AvatarImage src={user?.profileImageUrl || undefined} />
             <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">

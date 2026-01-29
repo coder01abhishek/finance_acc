@@ -203,7 +203,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   private async updateAccountBalances(tx: Transaction) {
-    const amount = Number(tx.amount);
+    const amount = Number(tx.amountInInr);
     
     if (tx.type === 'income') {
         await db.execute(sql`UPDATE accounts SET current_balance = current_balance + ${amount} WHERE id = ${tx.accountId}`);
@@ -305,17 +305,17 @@ export class DatabaseStorage implements IStorage {
         )
     );
     
-    const income = monthlyTx.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
-    const expense = monthlyTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+    const income = monthlyTx.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amountInInr), 0);
+    const expense = monthlyTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amountInInr), 0);
     const currentMonthProfitLoss = income - expense;
 
     // Top Expenses
     const expensesByCategory = new Map<string, number>();
     for (const tx of monthlyTx) {
         if (tx.type === 'expense' && tx.categoryId) {
-            const category = await this.getCategory(tx.categoryId); // N+1 but fine for small dashboard
+            const category = await this.getCategory(tx.categoryId);
             const name = category?.name || 'Unknown';
-            expensesByCategory.set(name, (expensesByCategory.get(name) || 0) + Number(tx.amount));
+            expensesByCategory.set(name, (expensesByCategory.get(name) || 0) + Number(tx.amountInInr));
         }
     }
     const topExpenses = Array.from(expensesByCategory.entries())

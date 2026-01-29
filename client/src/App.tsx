@@ -14,7 +14,6 @@ import InvoicesPage from "@/pages/invoices";
 import ReportsPage from "@/pages/reports";
 import GoalsPage from "@/pages/goals";
 import SettingsPage from "@/pages/settings";
-import CurrencyConverterPage from "@/pages/currency-converter";
 import LoginPage from "@/pages/login-page";
 import NotFound from "@/pages/not-found";
 
@@ -64,9 +63,6 @@ function Router() {
       </Route>
       <Route path="/goals">
         <ProtectedRoute component={GoalsPage} />
-      </Route>
-      <Route path="/currency">
-        <ProtectedRoute component={CurrencyConverterPage} />
       </Route>
       <Route path="/settings">
         <ProtectedRoute component={SettingsPage} />

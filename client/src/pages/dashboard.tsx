@@ -66,7 +66,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className={cn("text-2xl font-bold font-mono", (stats?.currentMonthProfitLoss || 0) >= 0 ? "text-emerald-600" : "text-rose-600")}>
-              ${stats?.currentMonthProfitLoss?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{stats?.currentMonthProfitLoss?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               +20.1% from last month
@@ -83,7 +83,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">
-              ${stats?.totalAvailableFunds?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{stats?.totalAvailableFunds?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Across all accounts
@@ -100,7 +100,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">
-              ${stats?.odLimitUsed?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{stats?.odLimitUsed?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
             <div className="w-full bg-secondary/10 h-1.5 rounded-full mt-2 overflow-hidden">
                <div 
@@ -120,8 +120,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">
-              {/* Calculating from service breakdown for demo */}
-              ${stats?.revenueByService.reduce((acc, curr) => acc + Number(curr.amount), 0).toLocaleString()}
+              ₹{stats?.revenueByService.reduce((acc, curr) => acc + Number(curr.amount), 0).toLocaleString('en-IN')}
             </div>
              <p className="text-xs text-muted-foreground mt-1">
               From {stats?.revenueByService.length} streams
@@ -154,7 +153,7 @@ export default function Dashboard() {
                     fontSize={12} 
                     tickLine={false} 
                     axisLine={false}
-                    tickFormatter={(value) => `$${value}`}
+                    tickFormatter={(value) => `₹${value}`}
                   />
                   <Tooltip 
                     cursor={{fill: 'transparent'}}
@@ -234,7 +233,7 @@ export default function Dashboard() {
                     "font-mono font-bold",
                     tx.type === 'income' ? "text-emerald-600" : "text-rose-600"
                   )}>
-                    {tx.type === 'income' ? '+' : '-'}${Number(tx.amount).toLocaleString()}
+                    {tx.type === 'income' ? '+' : '-'}₹{Number(tx.amountInInr).toLocaleString('en-IN')}
                   </div>
                 </div>
               ))}

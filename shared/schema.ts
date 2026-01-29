@@ -15,6 +15,7 @@ export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "sent", "pai
 export const userRoleEnum = pgEnum("user_role", ["admin", "hr", "manager", "data_entry"]);
 export const goalTypeEnum = pgEnum("goal_type", ["revenue", "expense"]);
 export const goalPeriodEnum = pgEnum("goal_period", ["monthly", "quarterly"]);
+export const currencyEnum = pgEnum("currency", ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"]);
 
 // EXTEND USERS TABLE (Optional - handled via metadata or separate table if strict constraints needed)
 // For now, we'll assume the 'users' table from auth is sufficient for identity.
@@ -45,43 +46,50 @@ export const accounts = pgTable("accounts", {
   isActive: boolean("is_active").default(true).notNull(),
 });
 
-// TRANSACTIONS
+// TRANSACTIONS - Multi-currency support (INR as base)
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  originalAmount: decimal("original_amount", { precision: 12, scale: 2 }).notNull(),
+  originalCurrency: currencyEnum("original_currency").default("INR").notNull(),
+  exchangeRateToInr: decimal("exchange_rate_to_inr", { precision: 10, scale: 4 }).default("1").notNull(),
+  amountInInr: decimal("amount_in_inr", { precision: 12, scale: 2 }).notNull(),
   type: transactionTypeEnum("type").notNull(),
   categoryId: integer("category_id").references(() => categories.id),
   accountId: integer("account_id").references(() => accounts.id).notNull(),
-  toAccountId: integer("to_account_id").references(() => accounts.id), // For transfers
-  description: text("description"), // Short description
-  notes: text("notes"), // Long notes
+  toAccountId: integer("to_account_id").references(() => accounts.id),
+  description: text("description"),
+  notes: text("notes"),
   attachmentUrl: text("attachment_url"),
   status: transactionStatusEnum("status").default("draft").notNull(),
-  createdBy: text("created_by").notNull(), // Auth ID
+  createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  approvedBy: text("approved_by"), // Auth ID
+  approvedBy: text("approved_by"),
   approvedAt: timestamp("approved_at"),
 });
 
-// CLIENTS
+// CLIENTS - with preferred invoice currency
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email"),
   phone: text("phone"),
   address: text("address"),
+  preferredCurrency: currencyEnum("preferred_currency").default("INR").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
 });
 
-// INVOICES
+// INVOICES - with currency support
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
   invoiceNumber: text("invoice_number").notNull().unique(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
   date: date("date").notNull(),
   dueDate: date("due_date").notNull(),
+  currency: currencyEnum("currency").default("INR").notNull(),
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  totalAmountInInr: decimal("total_amount_in_inr", { precision: 12, scale: 2 }).notNull(),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }).default("1").notNull(),
   status: invoiceStatusEnum("status").default("draft").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
