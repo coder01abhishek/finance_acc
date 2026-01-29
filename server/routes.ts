@@ -174,6 +174,25 @@ export async function registerRoutes(
     const stats = await storage.getDashboardStats(req.query.month as string);
     res.json(stats);
   });
+
+  // === GOALS ===
+  app.get(api.goals.list.path, isAuthenticated, async (req, res) => {
+    const list = await storage.getGoals();
+    res.json(list);
+  });
+
+  app.post(api.goals.create.path, isAuthenticated, async (req, res) => {
+    try {
+      const input = api.goals.create.input.parse(req.body);
+      const goal = await storage.createGoal(input);
+      res.status(201).json(goal);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
   
   // === SEED DATA ===
   await seedDatabase();

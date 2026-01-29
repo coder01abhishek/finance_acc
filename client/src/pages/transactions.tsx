@@ -13,15 +13,21 @@ import { Plus, Filter, Search, CheckCircle, XCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertTransactionSchema } from "@shared/schema";
+// Using custom form schema, not importing insertTransactionSchema
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 
-// Schema for form (converting strings to numbers for API)
-const formSchema = insertTransactionSchema.extend({
+// Schema for form - omit date from base and use string-based fields
+const formSchema = z.object({
+  dateStr: z.string().min(1, "Date is required"),
+  type: z.enum(["income", "expense", "transfer", "opening_balance"]),
   amount: z.string().min(1, "Amount is required"),
   accountId: z.string().min(1, "Account is required"),
   categoryId: z.string().optional(),
+  toAccountId: z.string().optional(),
+  description: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.enum(["draft", "submitted", "approved", "rejected"]).default("draft"),
 });
 
 export default function TransactionsPage() {
@@ -42,16 +48,21 @@ export default function TransactionsPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: new Date(),
+      dateStr: format(new Date(), "yyyy-MM-dd"),
       type: "expense",
       status: "draft",
       amount: "",
+      accountId: "",
+      categoryId: "",
+      description: "",
+      notes: "",
     }
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     createMutation.mutate({
       ...values,
+      date: new Date(values.dateStr),
       accountId: parseInt(values.accountId as string),
       categoryId: values.categoryId ? parseInt(values.categoryId as string) : undefined,
       toAccountId: values.toAccountId ? parseInt(values.toAccountId as string) : undefined,
@@ -99,13 +110,26 @@ export default function TransactionsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
+                      name="dateStr"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} data-testid="input-tx-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
                       name="type"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Type</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger data-testid="select-tx-type">
                                 <SelectValue placeholder="Select type" />
                               </SelectTrigger>
                             </FormControl>
@@ -119,20 +143,21 @@ export default function TransactionsPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="amount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Amount</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} data-testid="input-tx-amount" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-2 gap-4">
                      <FormField

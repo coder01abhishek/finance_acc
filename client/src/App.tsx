@@ -11,6 +11,9 @@ import Dashboard from "@/pages/dashboard";
 import TransactionsPage from "@/pages/transactions";
 import AccountsPage from "@/pages/accounts";
 import InvoicesPage from "@/pages/invoices";
+import ReportsPage from "@/pages/reports";
+import GoalsPage from "@/pages/goals";
+import SettingsPage from "@/pages/settings";
 import LoginPage from "@/pages/login-page";
 import NotFound from "@/pages/not-found";
 
@@ -56,13 +59,13 @@ function Router() {
         <ProtectedRoute component={InvoicesPage} />
       </Route>
       <Route path="/reports">
-        <ProtectedRoute component={() => <div className="p-8 text-center text-muted-foreground">Reports Module Coming Soon</div>} />
+        <ProtectedRoute component={ReportsPage} />
       </Route>
       <Route path="/goals">
-        <ProtectedRoute component={() => <div className="p-8 text-center text-muted-foreground">Goals Module Coming Soon</div>} />
+        <ProtectedRoute component={GoalsPage} />
       </Route>
       <Route path="/settings">
-        <ProtectedRoute component={() => <div className="p-8 text-center text-muted-foreground">Settings Module Coming Soon</div>} />
+        <ProtectedRoute component={SettingsPage} />
       </Route>
 
       <Route component={NotFound} />
