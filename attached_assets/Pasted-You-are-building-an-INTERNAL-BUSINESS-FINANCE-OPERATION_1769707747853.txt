@@ -1,0 +1,255 @@
+You are building an INTERNAL BUSINESS FINANCE & OPERATIONS MANAGEMENT SOFTWARE
+for a small-to-mid size IT services company.
+
+This software is NOT for GST, tax filing, or statutory accounting.
+It is strictly for INTERNAL CONTROL, VISIBILITY, CASH FLOW, AND DECISION-MAKING.
+
+--------------------------------------------------
+BUSINESS CONTEXT
+--------------------------------------------------
+
+Company type:
+- IT / Digital Services company
+- Services include: SEO, UI/UX, Development, Mobile App Development, etc.
+
+Money sources:
+- One Primary Current Account
+- One Overdraft / CC Account (same bank, different account)
+- Occasional Cash collections
+- UPI payments
+
+Users:
+- Owner / Admin
+- HR
+- Manager
+- Data Entry Staff
+
+--------------------------------------------------
+CORE DESIGN PRINCIPLES
+--------------------------------------------------
+
+1. Extremely simple UI (non-accountant friendly)
+2. No accounting jargon
+3. Every number must be explainable
+4. No hidden calculations
+5. Audit trail for every change
+6. Human-error tolerant (review & approval flows)
+
+--------------------------------------------------
+MODULE 1: TRANSACTIONS (CORE)
+--------------------------------------------------
+
+Each transaction must have:
+
+- Date
+- Amount
+- Type (STRICT ENUM):
+  - Income
+  - Expense
+  - Transfer
+  - Opening Balance
+- Category (dynamic, user-defined)
+- Account:
+  - Current Account
+  - OD / CC
+  - Cash
+  - UPI
+- Notes / Description
+- Created by (user)
+- Status:
+  - Draft
+  - Submitted
+  - Approved
+  - Rejected
+- Optional attachment (bill, invoice, screenshot)
+
+Rules:
+- Opening Balance NEVER counts as income or expense
+- Transfers NEVER affect profit/loss
+- Only Approved transactions affect reports
+
+--------------------------------------------------
+MODULE 2: DYNAMIC CATEGORIES
+--------------------------------------------------
+
+- Single category system (no income/expense split at database level)
+- Categories are fully user-managed:
+  - Create
+  - Rename
+  - Disable (soft delete)
+- Historical transactions retain original category names
+- Categories can be grouped later (optional)
+
+--------------------------------------------------
+MODULE 3: ACCOUNT MANAGEMENT
+--------------------------------------------------
+
+Accounts to track:
+- Current Account
+- OD / CC Account
+- Cash
+- UPI
+
+Each account shows:
+- Opening Balance (per month)
+- Total Inflows
+- Total Outflows
+- Closing Balance
+- Manual bank statement comparison
+
+Transfers logic:
+- Current ↔ OD
+- Cash ↔ Bank
+- OD ↔ Bank
+Transfers do NOT affect income/expense
+
+--------------------------------------------------
+MODULE 4: MONTHLY VIEW (MOST IMPORTANT)
+--------------------------------------------------
+
+For any selected month:
+
+- Total Income
+- Total Expense
+- Net Profit / Loss
+- Opening Balance (per account)
+- Closing Balance (per account)
+- Category-wise Expense Breakdown
+- Category-wise Income Breakdown
+- Revenue by Service Type
+- Withdrawals vs Business Expenses
+- OD Used vs OD Available
+
+--------------------------------------------------
+MODULE 5: DASHBOARD
+--------------------------------------------------
+
+Owner Dashboard should show:
+
+- Current month profit/loss
+- Total available funds (Bank + Cash + UPI)
+- OD limit used & remaining
+- Top 5 expense categories
+- Revenue split by service
+- Month-over-month comparison
+- Alerts & warnings
+
+--------------------------------------------------
+MODULE 6: ROLES & PERMISSIONS (CRITICAL)
+--------------------------------------------------
+
+Roles:
+
+1. Admin (Owner)
+   - Full access
+   - Can approve/reject entries
+   - Can edit past data
+   - Can manage users
+
+2. HR
+   - Can enter expenses
+   - Cannot approve
+   - Cannot edit approved entries
+
+3. Manager
+   - Can create client invoices
+   - Can view reports
+   - Cannot change transactions
+
+4. Data Entry
+   - Can create draft entries only
+
+Approval Flow:
+- Entries must be approved before affecting reports
+- Approval history must be logged
+
+--------------------------------------------------
+MODULE 7: INVOICING & CLIENT PAYMENTS
+--------------------------------------------------
+
+- Client database
+- Create invoices
+- Recurring invoices
+- Due date tracking
+- Invoice status:
+  - Draft
+  - Sent
+  - Paid
+  - Overdue
+
+SMTP Integration:
+- Custom SMTP (Gmail / Outlook / Custom)
+- Invoice email sending
+- Automatic reminders before due date
+- Overdue notifications
+
+--------------------------------------------------
+MODULE 8: ALERTS & SMART NOTIFICATIONS
+--------------------------------------------------
+
+System alerts for:
+- Unusually high expenses
+- Sudden revenue drop
+- OD usage crossing threshold
+- Missed invoice payments
+- Target vs actual gap
+
+--------------------------------------------------
+MODULE 9: GOALS & TARGETS
+--------------------------------------------------
+
+- Monthly targets
+- Quarterly targets
+- Revenue goals
+- Expense caps
+- Progress tracking with visual indicators
+
+--------------------------------------------------
+MODULE 10: REPORTS & EXPORTS
+--------------------------------------------------
+
+Reports:
+- Monthly summary
+- Category-wise report
+- Account-wise cash flow
+- Profit trends
+- Client revenue report
+
+Exports:
+- Excel
+- CSV
+- PDF
+
+--------------------------------------------------
+MODULE 11: DATA SAFETY
+--------------------------------------------------
+
+- Automatic backups
+- Activity logs
+- Change history
+- Soft deletes only
+- Recovery option
+
+--------------------------------------------------
+NON-GOALS (VERY IMPORTANT)
+--------------------------------------------------
+
+DO NOT build:
+- GST calculations
+- Tax filing
+- Balance sheet
+- TDS
+- Statutory compliance modules
+
+--------------------------------------------------
+FINAL GOAL
+--------------------------------------------------
+
+This system should:
+- Replace complex Excel sheets
+- Give the owner confidence in numbers
+- Reduce manual mistakes
+- Improve cash flow visibility
+- Be scalable but SIMPLE
+
+Focus on clarity over accounting perfection.
