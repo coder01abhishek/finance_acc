@@ -182,19 +182,95 @@ export async function registerRoutes(
 }
 
 async function seedDatabase() {
-    const cats = await storage.getCategories();
-    if (cats.length === 0) {
-        console.log("Seeding database...");
-        await storage.createCategory({ name: "Sales Revenue", isSystem: true, isEnabled: true });
-        await storage.createCategory({ name: "Consulting Fees", isSystem: true, isEnabled: true });
-        await storage.createCategory({ name: "Office Rent", isSystem: false, isEnabled: true });
-        await storage.createCategory({ name: "Salaries", isSystem: false, isEnabled: true });
-        await storage.createCategory({ name: "Software Subscriptions", isSystem: false, isEnabled: true });
-        await storage.createCategory({ name: "Office Supplies", isSystem: false, isEnabled: true });
-        await storage.createCategory({ name: "Travel", isSystem: false, isEnabled: true });
-        
-        await storage.createAccount({ name: "Main Bank Account (HDFC)", type: "current", openingBalance: "100000", currentBalance: "100000", isActive: true });
-        await storage.createAccount({ name: "Petty Cash", type: "cash", openingBalance: "5000", currentBalance: "5000", isActive: true });
-        await storage.createAccount({ name: "Corporate Credit Card", type: "od_cc", openingBalance: "0", currentBalance: "0", isActive: true });
-    }
+  const cats = await storage.getCategories();
+  if (cats.length === 0) {
+    console.log("Seeding database with dummy data...");
+    
+    // Create Categories
+    const salesRev = await storage.createCategory({ name: "Sales Revenue", isSystem: true, isEnabled: true });
+    const consultFees = await storage.createCategory({ name: "Consulting Fees", isSystem: true, isEnabled: true });
+    const rent = await storage.createCategory({ name: "Office Rent", isSystem: false, isEnabled: true });
+    const salaries = await storage.createCategory({ name: "Salaries", isSystem: false, isEnabled: true });
+    const software = await storage.createCategory({ name: "Software Subscriptions", isSystem: false, isEnabled: true });
+    const supplies = await storage.createCategory({ name: "Office Supplies", isSystem: false, isEnabled: true });
+    const travel = await storage.createCategory({ name: "Travel", isSystem: false, isEnabled: true });
+    
+    // Create Accounts
+    const hdfc = await storage.createAccount({ name: "Main Bank Account (HDFC)", type: "current", openingBalance: "100000", currentBalance: "100000", isActive: true });
+    const cash = await storage.createAccount({ name: "Petty Cash", type: "cash", openingBalance: "5000", currentBalance: "5000", isActive: true });
+    const cc = await storage.createAccount({ name: "Corporate Credit Card", type: "od_cc", openingBalance: "0", currentBalance: "0", isActive: true });
+
+    // Create Clients
+    const clientA = await storage.createClient({ name: "Acme Corp", email: "finance@acme.com", phone: "+1-555-0123", address: "123 Business Way", isActive: true });
+    const clientB = await storage.createClient({ name: "Global Tech Solutions", email: "billing@globaltech.io", phone: "+1-555-9876", address: "456 Innovation Dr", isActive: true });
+
+    // Create Invoices
+    await storage.createInvoice(
+      { invoiceNumber: "INV-2026-001", clientId: clientA.id, date: "2026-01-15", dueDate: "2026-02-15", totalAmount: "25000", status: "paid" },
+      [{ description: "UI/UX Design Services", quantity: "1", price: "25000", amount: "25000" }]
+    );
+    await storage.createInvoice(
+      { invoiceNumber: "INV-2026-002", clientId: clientB.id, date: "2026-01-20", dueDate: "2026-02-20", totalAmount: "15000", status: "sent" },
+      [{ description: "Mobile App Development - Milestone 1", quantity: "1", price: "15000", amount: "15000" }]
+    );
+
+    // Create Transactions (Approved ones affect stats)
+    const adminId = "system-seed"; // Placeholder for seed
+    
+    // Income
+    await storage.createTransaction({
+      date: new Date(),
+      amount: "25000",
+      type: "income",
+      categoryId: salesRev.id,
+      accountId: hdfc.id,
+      description: "Acme Corp Invoice Payment",
+      status: "approved",
+      createdBy: adminId
+    });
+
+    // Expenses
+    await storage.createTransaction({
+      date: new Date(),
+      amount: "45000",
+      type: "expense",
+      categoryId: rent.id,
+      accountId: hdfc.id,
+      description: "January Office Rent",
+      status: "approved",
+      createdBy: adminId
+    });
+
+    await storage.createTransaction({
+      date: new Date(),
+      amount: "1200",
+      type: "expense",
+      categoryId: software.id,
+      accountId: cc.id,
+      description: "Cloud Hosting - AWS",
+      status: "approved",
+      createdBy: adminId
+    });
+
+    // Draft Transaction
+    await storage.createTransaction({
+      date: new Date(),
+      amount: "500",
+      type: "expense",
+      categoryId: supplies.id,
+      accountId: cash.id,
+      description: "Stationery items",
+      status: "draft",
+      createdBy: adminId
+    });
+
+    // Create a Goal
+    await storage.createGoal({
+      type: "revenue",
+      targetAmount: "500000",
+      period: "monthly",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31"
+    });
+  }
 }
