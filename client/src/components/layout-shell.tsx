@@ -11,7 +11,8 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  ArrowRightLeft
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/invoices", label: "Invoicing", icon: FileText },
   { href: "/reports", label: "Reports", icon: PieChart },
   { href: "/goals", label: "Goals", icon: Target },
+  { href: "/currency", label: "Currency", icon: ArrowRightLeft },
 ];
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
