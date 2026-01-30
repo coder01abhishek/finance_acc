@@ -94,6 +94,12 @@ export async function registerRoutes(
     }
   });
 
+  app.delete(api.accounts.delete.path, isAuthenticated, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteAccount(id);
+    res.status(204).send();
+  });
+
   // === EXCHANGE RATES ===
   app.get("/api/exchange-rate/:currency", isAuthenticated, async (req, res) => {
     const currency = req.params.currency.toUpperCase();

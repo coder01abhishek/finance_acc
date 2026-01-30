@@ -80,9 +80,6 @@ export function useCreateAccount() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (data: z.infer<typeof api.accounts.create.input>) => {
-      // Coerce decimals to number/string as needed by schema, schema expects strings for decimals often but verify
-      // The schema uses z.number() or z.string() depending on how createInsertSchema infers decimal
-      // Usually drizzle-zod infers decimal as number or string. Let's send what the form gives us.
       const res = await fetch(api.accounts.create.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,6 +92,27 @@ export function useCreateAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.accounts.list.path] });
       toast({ title: "Account created", variant: "default" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(api.accounts.delete.path.replace(':id', String(id)), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete account");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.accounts.list.path] });
+      toast({ title: "Account deleted", variant: "default" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

@@ -27,6 +27,7 @@ export interface IStorage {
   getAccount(id: number): Promise<Account | undefined>;
   createAccount(account: InsertAccount): Promise<Account>;
   updateAccount(id: number, account: Partial<InsertAccount>): Promise<Account>;
+  deleteAccount(id: number): Promise<void>;
 
   // Transactions
   getTransactions(filters?: { month?: string, accountId?: number, categoryId?: number, status?: string }): Promise<TransactionWithDetails[]>;
@@ -135,6 +136,10 @@ export class DatabaseStorage implements IStorage {
   async updateAccount(id: number, account: Partial<InsertAccount>): Promise<Account> {
     const [updated] = await db.update(accounts).set(account).where(eq(accounts.id, id)).returning();
     return updated;
+  }
+
+  async deleteAccount(id: number): Promise<void> {
+    await db.delete(accounts).where(eq(accounts.id, id));
   }
 
   // === TRANSACTIONS ===

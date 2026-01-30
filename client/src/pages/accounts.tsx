@@ -1,11 +1,12 @@
-import { useAccounts, useCreateAccount } from "@/hooks/use-finance";
+import { useAccounts, useCreateAccount, useDeleteAccount } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Wallet, CreditCard, Banknote, Landmark } from "lucide-react";
+import { Plus, Wallet, CreditCard, Banknote, Landmark, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +23,7 @@ export default function AccountsPage() {
   const { data: accounts, isLoading } = useAccounts();
   const [isOpen, setIsOpen] = useState(false);
   const createMutation = useCreateAccount();
+  const deleteMutation = useDeleteAccount();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -158,12 +160,41 @@ export default function AccountsPage() {
                 <div className="space-y-1">
                    <p className="text-sm text-muted-foreground">Current Balance</p>
                    <p className="text-2xl font-mono font-bold tracking-tight text-foreground">
-                     ${Number(account.currentBalance).toLocaleString()}
+                     ₹{Number(account.currentBalance).toLocaleString('en-IN')}
                    </p>
                 </div>
               </CardContent>
-              <CardFooter className="bg-muted/30 pt-4 text-xs text-muted-foreground">
-                Type: <span className="uppercase ml-1 font-medium">{account.type.replace('_', ' ')}</span>
+              <CardFooter className="bg-muted/30 pt-4 text-xs text-muted-foreground flex items-center justify-between gap-2">
+                <span>Type: <span className="uppercase ml-1 font-medium">{account.type.replace('_', ' ')}</span></span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      data-testid={`button-delete-account-${account.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{account.name}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => deleteMutation.mutate(account.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardFooter>
             </Card>
           );
