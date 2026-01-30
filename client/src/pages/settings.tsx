@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Tag, Users, Shield } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
+import { useToast } from "@/hooks/use-toast";
 
 function useAppUsers() {
   return useQuery({
@@ -23,6 +25,30 @@ function useAppUsers() {
   });
 }
 
+function useUpdateUserRole() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ id, role }: { id: number; role: string }) => {
+      const res = await fetch(api.appUsers.updateRole.path.replace(':id', String(id)), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update role");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.appUsers.list.path] });
+      toast({ title: "Role updated", variant: "default" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
 export default function SettingsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -31,6 +57,7 @@ export default function SettingsPage() {
   const { data: appUsers, isLoading: usersLoading } = useAppUsers();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
+  const updateRoleMutation = useUpdateUserRole();
 
   const handleToggleCategory = (id: number, currentEnabled: boolean) => {
     updateCategoryMutation.mutate({ id, data: { isEnabled: !currentEnabled } });
@@ -151,17 +178,26 @@ export default function SettingsPage() {
               ) : (
                 <div className="divide-y">
                   {appUsers?.map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <div className="font-medium">{user.name || "Unknown User"}</div>
-                        <div className="text-sm text-muted-foreground">{user.email || "No email"}</div>
+                    <div key={user.id} className="flex items-center justify-between py-3 gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{user.name || "Unknown User"}</div>
+                        <div className="text-sm text-muted-foreground truncate">{user.email || "No email"}</div>
                       </div>
-                      <Badge 
-                        variant={user.role === 'admin' ? 'default' : 'secondary'}
-                        className="capitalize"
+                      <Select 
+                        value={user.role} 
+                        onValueChange={(role) => updateRoleMutation.mutate({ id: user.id, role })}
+                        disabled={updateRoleMutation.isPending}
                       >
-                        {user.role.replace('_', ' ')}
-                      </Badge>
+                        <SelectTrigger className="w-[140px]" data-testid={`select-role-${user.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="hr">HR</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="data_entry">Data Entry</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   ))}
                 </div>
