@@ -39,6 +39,30 @@ export function useCreateCategory() {
   });
 }
 
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<z.infer<typeof api.categories.create.input>> }) => {
+      const res = await fetch(api.categories.update.path.replace(':id', String(id)), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update category");
+      return api.categories.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
+      toast({ title: "Category updated", variant: "default" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
 // === ACCOUNTS ===
 export function useAccounts() {
   return useQuery({

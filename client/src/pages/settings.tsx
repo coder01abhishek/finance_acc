@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCategories, useCreateCategory } from "@/hooks/use-finance";
+import { useCategories, useCreateCategory, useUpdateCategory } from "@/hooks/use-finance";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,11 @@ export default function SettingsPage() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const { data: appUsers, isLoading: usersLoading } = useAppUsers();
   const createCategoryMutation = useCreateCategory();
+  const updateCategoryMutation = useUpdateCategory();
+
+  const handleToggleCategory = (id: number, currentEnabled: boolean) => {
+    updateCategoryMutation.mutate({ id, data: { isEnabled: !currentEnabled } });
+  };
 
   const handleCreateCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +116,12 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                          <Switch checked={cat.isEnabled} disabled={cat.isSystem} />
+                          <Switch 
+                            checked={cat.isEnabled} 
+                            disabled={cat.isSystem || updateCategoryMutation.isPending}
+                            onCheckedChange={() => handleToggleCategory(cat.id, cat.isEnabled)}
+                            data-testid={`switch-category-${cat.id}`}
+                          />
                           <span className="text-sm text-muted-foreground">
                             {cat.isEnabled ? "Active" : "Disabled"}
                           </span>
