@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { useTransactions, useCategories, useAccounts, useCreateTransaction, useApproveTransaction } from "@/hooks/use-finance";
+import { useTransactions, useCategories, useAccounts, useCreateTransaction, useApproveTransaction, useDeleteTransaction } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter 
 } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Plus, Filter, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { Plus, Filter, CheckCircle, XCircle, RefreshCw, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,6 +48,7 @@ export default function TransactionsPage() {
   
   const createMutation = useCreateTransaction();
   const approveMutation = useApproveTransaction();
+  const deleteMutation = useDeleteTransaction();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -445,23 +447,56 @@ export default function TransactionsPage() {
                     <StatusBadge status={tx.status} />
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {tx.status === 'submitted' && (
-                      <div className="flex justify-end gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          onClick={() => approveMutation.mutate(tx.id)}
-                          disabled={approveMutation.isPending}
-                          data-testid={`button-approve-${tx.id}`}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50">
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex justify-end gap-1">
+                      {tx.status === 'submitted' && (
+                        <>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => approveMutation.mutate(tx.id)}
+                            disabled={approveMutation.isPending}
+                            data-testid={`button-approve-${tx.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                      {tx.status !== 'approved' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                              data-testid={`button-delete-${tx.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this transaction? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => deleteMutation.mutate(tx.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

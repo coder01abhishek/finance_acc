@@ -307,6 +307,14 @@ export const api = {
         200: z.custom<typeof appUsers.$inferSelect>(),
       },
     },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/admin/users/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
   }
 };
 

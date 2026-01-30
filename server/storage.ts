@@ -14,6 +14,7 @@ export interface IStorage {
   createAppUser(authId: string, role?: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
   getAllAppUsers(): Promise<(AppUser & { email: string | null, name: string | null })[]>;
   updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
+  deleteAppUser(id: number): Promise<void>;
 
   // Categories
   getCategories(): Promise<Category[]>;
@@ -86,6 +87,10 @@ export class DatabaseStorage implements IStorage {
   async updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser> {
     const [user] = await db.update(appUsers).set({ role }).where(eq(appUsers.id, id)).returning();
     return user;
+  }
+
+  async deleteAppUser(id: number): Promise<void> {
+    await db.delete(appUsers).where(eq(appUsers.id, id));
   }
 
   // === CATEGORIES ===

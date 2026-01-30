@@ -43,6 +43,12 @@ export async function registerRoutes(
     res.json(user);
   });
 
+  app.delete(api.appUsers.delete.path, isAuthenticated, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteAppUser(id);
+    res.status(204).send();
+  });
+
   // === CATEGORIES ===
   app.get(api.categories.list.path, isAuthenticated, async (req, res) => {
     const list = await storage.getCategories();
@@ -168,6 +174,12 @@ export async function registerRoutes(
         approvedAt: new Date()
     });
     res.json(tx);
+  });
+
+  app.delete(api.transactions.delete.path, isAuthenticated, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteTransaction(id);
+    res.status(204).send();
   });
 
   // === INVOICES ===

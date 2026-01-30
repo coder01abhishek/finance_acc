@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Tag, Users, Shield } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, Tag, Users, Shield, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +50,27 @@ function useUpdateUserRole() {
   });
 }
 
+function useDeleteUser() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(api.appUsers.delete.path.replace(':id', String(id)), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete user");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.appUsers.list.path] });
+      toast({ title: "User deleted", variant: "default" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
 export default function SettingsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -58,6 +80,7 @@ export default function SettingsPage() {
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
   const updateRoleMutation = useUpdateUserRole();
+  const deleteUserMutation = useDeleteUser();
 
   const handleToggleCategory = (id: number, currentEnabled: boolean) => {
     updateCategoryMutation.mutate({ id, data: { isEnabled: !currentEnabled } });
@@ -183,21 +206,52 @@ export default function SettingsPage() {
                         <div className="font-medium truncate">{user.name || "Unknown User"}</div>
                         <div className="text-sm text-muted-foreground truncate">{user.email || "No email"}</div>
                       </div>
-                      <Select 
-                        value={user.role} 
-                        onValueChange={(role) => updateRoleMutation.mutate({ id: user.id, role })}
-                        disabled={updateRoleMutation.isPending}
-                      >
-                        <SelectTrigger className="w-[140px]" data-testid={`select-role-${user.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="hr">HR</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="data_entry">Data Entry</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Select 
+                          value={user.role} 
+                          onValueChange={(role) => updateRoleMutation.mutate({ id: user.id, role })}
+                          disabled={updateRoleMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[140px]" data-testid={`select-role-${user.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="hr">HR</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="data_entry">Data Entry</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              data-testid={`button-delete-user-${user.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to remove "{user.name || user.email}" from the system? They can still log in again with their Replit account.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => deleteUserMutation.mutate(user.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   ))}
                 </div>
