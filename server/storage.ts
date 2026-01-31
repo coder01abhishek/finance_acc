@@ -1,21 +1,18 @@
 import { db } from "./db";
 import { 
-  users, appUsers, categories, accounts, transactions, clients, invoices, invoiceItems, goals,
-  type User, type AppUser, type Category, type Account, type Transaction, type Client, type Invoice, type InvoiceItem, type Goal,
+  appUsers, categories, accounts, transactions, clients, invoices, invoiceItems, goals,
+  type AppUser, type Category, type Account, type Transaction, type Client, type Invoice, type InvoiceItem, type Goal,
   type InsertCategory, type InsertAccount, type InsertTransaction, type InsertClient, type InsertInvoice, type InsertInvoiceItem, type InsertGoal,
   type TransactionWithDetails, type InvoiceWithItems
 } from "@shared/schema";
 import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
-import { authStorage } from "./replit_integrations/auth/storage";
 
 export interface IStorage {
   // App Users
-  getAppUser(authId: string): Promise<AppUser | undefined>;
+  getAppUserById(id: number): Promise<AppUser | undefined>;
   getAppUserByEmail(email: string): Promise<AppUser | undefined>;
-  createAppUser(authId: string, role?: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
-  createAppUserManual(email: string, name: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
-  linkAppUserToAuth(id: number, authId: string): Promise<AppUser>;
-  getAllAppUsers(): Promise<(AppUser & { email: string | null, name: string | null })[]>;
+  createAppUserWithPassword(email: string, name: string, password: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
+  getAllAppUsers(): Promise<AppUser[]>;
   updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
   deleteAppUser(id: number): Promise<void>;
 
@@ -61,8 +58,8 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // === APP USERS ===
-  async getAppUser(authId: string): Promise<AppUser | undefined> {
-    const [user] = await db.select().from(appUsers).where(eq(appUsers.authId, authId));
+  async getAppUserById(id: number): Promise<AppUser | undefined> {
+    const [user] = await db.select().from(appUsers).where(eq(appUsers.id, id));
     return user;
   }
 
@@ -71,44 +68,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createAppUser(authId: string, role: "admin" | "hr" | "manager" | "data_entry" = "data_entry"): Promise<AppUser> {
-    const [user] = await db.insert(appUsers).values({ authId, role }).returning();
+  async createAppUserWithPassword(email: string, name: string, password: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser> {
+    const [user] = await db.insert(appUsers).values({ email, name, password, role }).returning();
     return user;
   }
 
-  async createAppUserManual(email: string, name: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser> {
-    const [user] = await db.insert(appUsers).values({ email, name, role }).returning();
-    return user;
-  }
-
-  async linkAppUserToAuth(id: number, authId: string): Promise<AppUser> {
-    const [user] = await db.update(appUsers).set({ authId }).where(eq(appUsers.id, id)).returning();
-    return user;
-  }
-
-  async getAllAppUsers(): Promise<(AppUser & { email: string | null, name: string | null })[]> {
-    const appUsersList = await db.select().from(appUsers);
-    const result = [];
-    
-    // Enrich with auth data if available, otherwise use stored email/name
-    for (const appUser of appUsersList) {
-      if (appUser.authId) {
-        const authUser = await authStorage.getUser(appUser.authId);
-        result.push({
-          ...appUser,
-          email: authUser?.email || appUser.email || null,
-          name: authUser ? `${authUser.firstName || ''} ${authUser.lastName || ''}`.trim() : appUser.name || null,
-        });
-      } else {
-        // Manually created user without auth link
-        result.push({
-          ...appUser,
-          email: appUser.email || null,
-          name: appUser.name || null,
-        });
-      }
-    }
-    return result;
+  async getAllAppUsers(): Promise<AppUser[]> {
+    return await db.select().from(appUsers);
   }
 
   async updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser> {

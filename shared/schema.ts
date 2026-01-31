@@ -23,9 +23,10 @@ export const currencyEnum = pgEnum("currency", ["INR", "USD", "EUR", "GBP", "AED
 
 export const appUsers = pgTable("app_users", {
   id: serial("id").primaryKey(),
-  authId: text("auth_id").unique(), // Links to users.id from auth (null for manually created users)
-  email: text("email").unique(), // Email for matching when user logs in
-  name: text("name"), // Display name
+  authId: text("auth_id").unique(), // Links to users.id from auth (null for email/password users)
+  email: text("email").unique().notNull(), // Email for login
+  password: text("password"), // Hashed password for email/password auth
+  name: text("name").notNull(), // Display name
   role: userRoleEnum("role").default("data_entry").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
 });

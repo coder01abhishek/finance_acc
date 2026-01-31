@@ -321,6 +321,7 @@ export const api = {
       input: z.object({
         email: z.string().email(),
         name: z.string().min(1),
+        password: z.string().min(6, "Password must be at least 6 characters"),
         role: z.enum(["admin", "hr", "manager", "data_entry"]),
       }),
       responses: {
@@ -328,7 +329,38 @@ export const api = {
         400: errorSchemas.validation,
       },
     },
-  }
+  },
+
+  // === AUTH ===
+  auth: {
+    login: {
+      method: 'POST' as const,
+      path: '/api/auth/login',
+      input: z.object({
+        email: z.string().email(),
+        password: z.string(),
+      }),
+      responses: {
+        200: z.object({ user: z.custom<typeof appUsers.$inferSelect>() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    logout: {
+      method: 'POST' as const,
+      path: '/api/auth/logout',
+      responses: {
+        200: z.object({ success: z.boolean() }),
+      },
+    },
+    me: {
+      method: 'GET' as const,
+      path: '/api/auth/me',
+      responses: {
+        200: z.object({ user: z.custom<typeof appUsers.$inferSelect>() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

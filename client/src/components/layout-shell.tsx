@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, useLogout } from "@/hooks/use-simple-auth";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
@@ -29,7 +29,8 @@ const navItems = [
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const logoutMutation = useLogout();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const NavContent = () => (
@@ -81,21 +82,21 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-4 px-2">
           <Avatar className="h-9 w-9 border border-border">
-            <AvatarImage src={user?.profileImageUrl || undefined} />
-            <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
+            <AvatarFallback>{user?.name?.[0]?.toUpperCase() || "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{user?.firstName} {user?.lastName}</p>
+            <p className="text-sm font-semibold truncate">{user?.name}</p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         </div>
         <Button 
           variant="outline" 
           className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-          onClick={() => logout()}
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
         >
           <LogOut className="w-4 h-4" />
-          Sign Out
+          {logoutMutation.isPending ? "Signing out..." : "Sign Out"}
         </Button>
       </div>
     </div>

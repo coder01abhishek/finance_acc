@@ -75,7 +75,7 @@ function useCreateUser() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (data: { email: string; name: string; role: string }) => {
+    mutationFn: async (data: { email: string; name: string; password: string; role: string }) => {
       const res = await fetch(api.appUsers.create.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,7 +90,7 @@ function useCreateUser() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.appUsers.list.path] });
-      toast({ title: "User created", description: "The user can now log in with their assigned role.", variant: "default" });
+      toast({ title: "User created", description: "The user can now log in with their email and password.", variant: "default" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -104,6 +104,7 @@ export default function SettingsPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<string>("data_entry");
   
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -236,12 +237,13 @@ export default function SettingsPage() {
                   </DialogHeader>
                   <form onSubmit={(e) => {
                     e.preventDefault();
-                    if (!newUserEmail.trim() || !newUserName.trim()) return;
-                    createUserMutation.mutate({ email: newUserEmail, name: newUserName, role: newUserRole }, {
+                    if (!newUserEmail.trim() || !newUserName.trim() || !newUserPassword.trim()) return;
+                    createUserMutation.mutate({ email: newUserEmail, name: newUserName, password: newUserPassword, role: newUserRole }, {
                       onSuccess: () => {
                         setIsUserDialogOpen(false);
                         setNewUserEmail("");
                         setNewUserName("");
+                        setNewUserPassword("");
                         setNewUserRole("data_entry");
                       }
                     });
@@ -253,6 +255,7 @@ export default function SettingsPage() {
                         placeholder="John Doe"
                         value={newUserName}
                         onChange={(e) => setNewUserName(e.target.value)}
+                        required
                         data-testid="input-user-name"
                       />
                     </div>
@@ -264,7 +267,21 @@ export default function SettingsPage() {
                         placeholder="user@example.com"
                         value={newUserEmail}
                         onChange={(e) => setNewUserEmail(e.target.value)}
+                        required
                         data-testid="input-user-email"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userPassword">Password</Label>
+                      <Input 
+                        id="userPassword"
+                        type="password"
+                        placeholder="Minimum 6 characters"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        data-testid="input-user-password"
                       />
                     </div>
                     <div className="space-y-2">
