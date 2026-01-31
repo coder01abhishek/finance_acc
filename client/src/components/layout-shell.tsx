@@ -28,7 +28,7 @@ import { api } from "@shared/routes";
 // Navigation items with role-based access
 // roles: which roles can see this item (empty = all roles)
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: [] }, // All roles
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ['admin', 'hr', 'manager'] }, // Not Data Entry
   { href: "/transactions", label: "Transactions", icon: Receipt, roles: ['admin', 'hr', 'data_entry'] },
   { href: "/accounts", label: "Accounts", icon: Wallet, roles: ['admin', 'hr'] },
   { href: "/invoices", label: "Invoicing", icon: FileText, roles: ['admin', 'manager'] },

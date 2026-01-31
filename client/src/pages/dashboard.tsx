@@ -1,4 +1,7 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { useDashboardStats, useTransactions } from "@/hooks/use-finance";
+import { useAuth } from "@/hooks/use-simple-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -22,8 +25,17 @@ import { Button } from "@/components/ui/button";
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useDashboardStats();
   const { data: recentTransactions } = useTransactions({ status: "submitted" });
+
+  // Redirect data_entry users to transactions page - they shouldn't see company financials
+  useEffect(() => {
+    if (user?.role === 'data_entry') {
+      setLocation('/transactions');
+    }
+  }, [user, setLocation]);
 
   if (isLoading) {
     return (

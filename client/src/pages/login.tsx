@@ -33,8 +33,15 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
 
+      const userData = await res.json();
       await queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-      setLocation("/");
+      
+      // Redirect based on role - data_entry goes directly to transactions
+      if (userData.user?.role === 'data_entry') {
+        setLocation("/transactions");
+      } else {
+        setLocation("/");
+      }
     } catch (err: any) {
       toast({
         title: "Login Failed",
