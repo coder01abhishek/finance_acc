@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Tag, Users, Shield, Trash2 } from "lucide-react";
+import { Plus, Tag, Users, Shield, Trash2, KeyRound } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
@@ -98,9 +98,38 @@ function useCreateUser() {
   });
 }
 
+function useResetPassword() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: number; newPassword: string }) => {
+      const res = await fetch(api.auth.resetPassword.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, newPassword }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to reset password");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Password reset", description: "The user's password has been updated." });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
 export default function SettingsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<number | null>(null);
+  const [resetPasswordUserName, setResetPasswordUserName] = useState("");
+  const [newPasswordForReset, setNewPasswordForReset] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
@@ -114,6 +143,25 @@ export default function SettingsPage() {
   const updateRoleMutation = useUpdateUserRole();
   const deleteUserMutation = useDeleteUser();
   const createUserMutation = useCreateUser();
+  const resetPasswordMutation = useResetPassword();
+
+  const handleOpenResetPassword = (userId: number, userName: string) => {
+    setResetPasswordUserId(userId);
+    setResetPasswordUserName(userName);
+    setNewPasswordForReset("");
+    setIsResetPasswordDialogOpen(true);
+  };
+
+  const handleResetPassword = () => {
+    if (!resetPasswordUserId || newPasswordForReset.length < 6) return;
+    resetPasswordMutation.mutate({ userId: resetPasswordUserId, newPassword: newPasswordForReset }, {
+      onSuccess: () => {
+        setIsResetPasswordDialogOpen(false);
+        setResetPasswordUserId(null);
+        setNewPasswordForReset("");
+      }
+    });
+  };
 
   const handleToggleCategory = (id: number, currentEnabled: boolean) => {
     updateCategoryMutation.mutate({ id, data: { isEnabled: !currentEnabled } });
@@ -338,6 +386,16 @@ export default function SettingsPage() {
                             <SelectItem value="data_entry">Data Entry</SelectItem>
                           </SelectContent>
                         </Select>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => handleOpenResetPassword(user.id, user.name || user.email)}
+                          data-testid={`button-reset-password-${user.id}`}
+                          title="Reset Password"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
@@ -353,7 +411,7 @@ export default function SettingsPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete User</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to remove "{user.name || user.email}" from the system? They can still log in again with their Replit account.
+                                Are you sure you want to remove "{user.name || user.email}" from the system? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -388,6 +446,39 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password for {resetPasswordUserName}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleResetPassword(); }} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPasswordForReset">New Password</Label>
+              <Input 
+                id="newPasswordForReset"
+                type="password"
+                placeholder="Minimum 6 characters"
+                value={newPasswordForReset}
+                onChange={(e) => setNewPasswordForReset(e.target.value)}
+                required
+                minLength={6}
+                data-testid="input-reset-password"
+              />
+            </div>
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                disabled={resetPasswordMutation.isPending || newPasswordForReset.length < 6}
+                data-testid="button-submit-reset-password"
+              >
+                {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
