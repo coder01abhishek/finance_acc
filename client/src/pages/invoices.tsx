@@ -111,7 +111,7 @@ export default function InvoicesPage() {
           <div className="flex gap-2">
             <Dialog open={isClientOpen} onOpenChange={setIsClientOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" data-testid="button-add-client">
                   <User className="w-4 h-4" /> Add Client
                 </Button>
               </DialogTrigger>
@@ -135,7 +135,7 @@ export default function InvoicesPage() {
 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2" data-testid="button-create-invoice">
                   <Plus className="w-4 h-4" /> Create Invoice
                 </Button>
               </DialogTrigger>
