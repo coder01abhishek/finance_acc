@@ -14,6 +14,7 @@ export interface IStorage {
   createAppUserWithPassword(email: string, name: string, password: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
   getAllAppUsers(): Promise<AppUser[]>;
   updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
+  updateAppUserPassword(id: number, hashedPassword: string): Promise<void>;
   deleteAppUser(id: number): Promise<void>;
 
   // Categories
@@ -80,6 +81,10 @@ export class DatabaseStorage implements IStorage {
   async updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser> {
     const [user] = await db.update(appUsers).set({ role }).where(eq(appUsers.id, id)).returning();
     return user;
+  }
+
+  async updateAppUserPassword(id: number, hashedPassword: string): Promise<void> {
+    await db.update(appUsers).set({ password: hashedPassword }).where(eq(appUsers.id, id));
   }
 
   async deleteAppUser(id: number): Promise<void> {

@@ -111,6 +111,60 @@ export async function registerRoutes(
     res.json({ user: { ...user, password: undefined } });
   });
 
+  // Change password (for logged-in user)
+  app.post(api.auth.changePassword.path, isAuthenticated, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = api.auth.changePassword.input.parse(req.body);
+      const userId = req.session.userId!;
+      
+      const user = await storage.getAppUserById(userId);
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Verify current password
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash and save new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateAppUserPassword(userId, hashedPassword);
+      
+      res.json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  // Reset password (admin only)
+  app.post(api.auth.resetPassword.path, isAdmin, async (req, res) => {
+    try {
+      const { newPassword } = api.auth.resetPassword.input.parse(req.body);
+      const targetUserId = Number(req.params.id);
+      
+      const targetUser = await storage.getAppUserById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Hash and save new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateAppUserPassword(targetUserId, hashedPassword);
+      
+      res.json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   // === APP USERS (Admin only) ===
   app.get(api.appUsers.list.path, isAdmin, async (req, res) => {
     const users = await storage.getAllAppUsers();

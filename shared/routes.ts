@@ -360,6 +360,31 @@ export const api = {
         401: errorSchemas.unauthorized,
       },
     },
+    changePassword: {
+      method: 'POST' as const,
+      path: '/api/auth/change-password',
+      input: z.object({
+        currentPassword: z.string(),
+        newPassword: z.string().min(6, "New password must be at least 6 characters"),
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+      },
+    },
+    resetPassword: {
+      method: 'POST' as const,
+      path: '/api/admin/users/:id/reset-password',
+      input: z.object({
+        newPassword: z.string().min(6, "Password must be at least 6 characters"),
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        403: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
   },
 };
 
