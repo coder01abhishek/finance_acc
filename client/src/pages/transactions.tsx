@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTransactions, useCategories, useAccounts, useCreateTransaction, useApproveTransaction, useDeleteTransaction } from "@/hooks/use-finance";
+import { useAuth } from "@/hooks/use-simple-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -38,6 +39,12 @@ export default function TransactionsPage() {
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const { user } = useAuth();
+  
+  // Role-based permissions
+  const canCreateTransactions = ['admin', 'hr', 'data_entry'].includes(user?.role || '');
+  const canApprove = user?.role === 'admin';
+  const isDataEntry = user?.role === 'data_entry';
   
   const { data: transactions, isLoading } = useTransactions({ 
     month: filterMonth || undefined,
@@ -148,12 +155,13 @@ export default function TransactionsPage() {
              </SelectContent>
           </Select>
           
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2" data-testid="button-add-transaction">
-                <Plus className="w-4 h-4" /> Add Transaction
-              </Button>
-            </DialogTrigger>
+          {canCreateTransactions && (
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2" data-testid="button-add-transaction">
+                  <Plus className="w-4 h-4" /> Add Transaction
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>New Transaction</DialogTitle>
@@ -386,6 +394,7 @@ export default function TransactionsPage() {
               </Form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 
@@ -448,7 +457,7 @@ export default function TransactionsPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">
-                      {tx.status === 'submitted' && (
+                      {tx.status === 'submitted' && canApprove && (
                         <>
                           <Button 
                             size="sm" 

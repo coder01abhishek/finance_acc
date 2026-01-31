@@ -36,6 +36,7 @@ export interface IStorage {
   getTransaction(id: number): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction>;
+  approveTransaction(id: number, approvedBy: string): Promise<Transaction>;
   deleteTransaction(id: number): Promise<void>;
   
   // Clients
@@ -202,6 +203,22 @@ export class DatabaseStorage implements IStorage {
     // It implies balances are calculated dynamically or updated.
     // Storing currentBalance in accounts table is an optimization. 
     // Let's stick to simple logic: if approved, update balance.
+
+    return updatedTransaction;
+  }
+
+  async approveTransaction(id: number, approvedBy: string): Promise<Transaction> {
+    const [oldTransaction] = await db.select().from(transactions).where(eq(transactions.id, id));
+    const [updatedTransaction] = await db.update(transactions).set({
+      status: 'approved',
+      approvedBy,
+      approvedAt: new Date()
+    }).where(eq(transactions.id, id)).returning();
+
+    // Update account balances when approved
+    if (oldTransaction.status !== 'approved') {
+      await this.updateAccountBalances(updatedTransaction);
+    }
 
     return updatedTransaction;
   }

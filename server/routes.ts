@@ -35,6 +35,43 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
   return next();
 }
 
+// Helper to get current user
+async function getCurrentUser(req: Request) {
+  if (!req.session?.userId) return null;
+  return storage.getAppUserById(req.session.userId);
+}
+
+// Role permission helpers
+function canCreateTransactions(role: string): boolean {
+  // Admin, HR, Data Entry can create transactions
+  return ['admin', 'hr', 'data_entry'].includes(role);
+}
+
+function canApproveTransactions(role: string): boolean {
+  // Only Admin can approve/reject transactions
+  return role === 'admin';
+}
+
+function canEditApprovedTransactions(role: string): boolean {
+  // Only Admin can edit approved transactions
+  return role === 'admin';
+}
+
+function canDeleteTransactions(role: string): boolean {
+  // Admin can delete any, others can only delete their own drafts
+  return role === 'admin';
+}
+
+function canCreateInvoices(role: string): boolean {
+  // Admin and Manager can create invoices
+  return ['admin', 'manager'].includes(role);
+}
+
+function canAccessSettings(role: string): boolean {
+  // Only Admin can access settings
+  return role === 'admin';
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -297,13 +334,25 @@ export async function registerRoutes(
 
   app.post(api.transactions.create.path, isAuthenticated, async (req, res) => {
     try {
+      const user = await getCurrentUser(req);
+      if (!user || !canCreateTransactions(user.role)) {
+        return res.status(403).json({ message: "You don't have permission to create transactions" });
+      }
+
       const { originalAmount, originalCurrency, exchangeRateToInr } = req.body;
       
       const rate = exchangeRateToInr ? parseFloat(exchangeRateToInr) : 1;
       const amountInInr = parseFloat(originalAmount) * rate;
       
+      // Data Entry users can only create draft entries
+      let status = req.body.status || 'draft';
+      if (user.role === 'data_entry' && status !== 'draft') {
+        status = 'draft'; // Force draft status for data entry users
+      }
+      
       const input = api.transactions.create.input.parse({
         ...req.body,
+        status,
         originalAmount: originalAmount.toString(),
         originalCurrency: originalCurrency || "INR",
         exchangeRateToInr: rate.toString(),
@@ -322,19 +371,40 @@ export async function registerRoutes(
   });
   
   app.post(api.transactions.approve.path, isAuthenticated, async (req, res) => {
-    const userId = req.session.userId!;
-    const user = await storage.getAppUserById(userId);
-    if (user?.role !== 'admin') return res.status(403).json({ message: "Admin only" });
+    const user = await getCurrentUser(req);
+    if (!user || !canApproveTransactions(user.role)) {
+      return res.status(403).json({ message: "Only admins can approve transactions" });
+    }
 
     const id = Number(req.params.id);
-    const tx = await storage.updateTransaction(id, { 
-        status: 'approved'
-    });
+    const tx = await storage.approveTransaction(id, String(user.id));
     res.json(tx);
   });
 
   app.delete(api.transactions.delete.path, isAuthenticated, async (req, res) => {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
     const id = Number(req.params.id);
+    const transaction = await storage.getTransaction(id);
+    
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+    
+    // Admin can delete any transaction
+    // Others can only delete their own draft transactions
+    if (user.role !== 'admin') {
+      if (transaction.createdBy !== String(user.id)) {
+        return res.status(403).json({ message: "You can only delete your own transactions" });
+      }
+      if (transaction.status !== 'draft') {
+        return res.status(403).json({ message: "You can only delete draft transactions" });
+      }
+    }
+    
     await storage.deleteTransaction(id);
     res.status(204).send();
   });
@@ -347,6 +417,11 @@ export async function registerRoutes(
 
   app.post(api.invoices.create.path, isAuthenticated, async (req, res) => {
     try {
+        const user = await getCurrentUser(req);
+        if (!user || !canCreateInvoices(user.role)) {
+          return res.status(403).json({ message: "Only admins and managers can create invoices" });
+        }
+        
         const { invoice, items } = req.body;
         const newInvoice = await storage.createInvoice(invoice, items);
         res.status(201).json(newInvoice);
@@ -363,6 +438,12 @@ export async function registerRoutes(
   });
   
   app.post(api.clients.create.path, isAuthenticated, async (req, res) => {
+      const user = await getCurrentUser(req);
+      // Admin, Manager can create clients
+      if (!user || !['admin', 'manager'].includes(user.role)) {
+        return res.status(403).json({ message: "Only admins and managers can create clients" });
+      }
+      
       const input = api.clients.create.input.parse(req.body);
       const client = await storage.createClient(input);
       res.status(201).json(client);

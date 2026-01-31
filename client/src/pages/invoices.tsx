@@ -1,4 +1,5 @@
 import { useInvoices, useClients, useCreateInvoice, useCreateClient } from "@/hooks/use-finance";
+import { useAuth } from "@/hooks/use-simple-auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,10 @@ export default function InvoicesPage() {
   const { data: clients } = useClients();
   const [isOpen, setIsOpen] = useState(false);
   const [isClientOpen, setIsClientOpen] = useState(false);
+  const { user } = useAuth();
+  
+  // Only admin and manager can create invoices/clients
+  const canCreate = ['admin', 'manager'].includes(user?.role || '');
   
   const createInvoiceMutation = useCreateInvoice();
   const createClientMutation = useCreateClient();
@@ -102,37 +107,38 @@ export default function InvoicesPage() {
           <p className="text-muted-foreground mt-1">Create and manage client invoices.</p>
         </div>
         
-        <div className="flex gap-2">
-           <Dialog open={isClientOpen} onOpenChange={setIsClientOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <User className="w-4 h-4" /> Add Client
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-               <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
-               <Form {...clientForm}>
-                 <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-4 py-4">
-                   <FormField control={clientForm.control} name="name" render={({field}) => (
-                     <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-                   )}/>
-                   <FormField control={clientForm.control} name="email" render={({field}) => (
-                     <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-                   )}/>
+        {canCreate && (
+          <div className="flex gap-2">
+            <Dialog open={isClientOpen} onOpenChange={setIsClientOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <User className="w-4 h-4" /> Add Client
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
+                <Form {...clientForm}>
+                  <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-4 py-4">
+                    <FormField control={clientForm.control} name="name" render={({field}) => (
+                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                    <FormField control={clientForm.control} name="email" render={({field}) => (
+                      <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
                     <DialogFooter>
                       <Button type="submit">Save Client</Button>
                     </DialogFooter>
-                 </form>
-               </Form>
-            </DialogContent>
-          </Dialog>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
 
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" /> Create Invoice
-              </Button>
-            </DialogTrigger>
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" /> Create Invoice
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>New Invoice</DialogTitle>
@@ -250,7 +256,8 @@ export default function InvoicesPage() {
               </Form>
             </DialogContent>
           </Dialog>
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
