@@ -39,6 +39,40 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   );
 }
 
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  if (user?.role !== 'admin') {
+    return (
+      <LayoutShell>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+          <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
+          <p className="text-muted-foreground">You don't have permission to access this page.</p>
+          <p className="text-sm text-muted-foreground mt-1">Only administrators can access Settings.</p>
+        </div>
+      </LayoutShell>
+    );
+  }
+
+  return (
+    <LayoutShell>
+      <Component />
+    </LayoutShell>
+  );
+}
+
 function Router() {
   return (
     <Switch>
@@ -64,7 +98,7 @@ function Router() {
         <ProtectedRoute component={GoalsPage} />
       </Route>
       <Route path="/settings">
-        <ProtectedRoute component={SettingsPage} />
+        <AdminRoute component={SettingsPage} />
       </Route>
 
       <Route component={NotFound} />

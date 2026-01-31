@@ -23,6 +23,18 @@ function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   return res.status(401).json({ message: "Unauthorized" });
 }
 
+// Admin-only middleware
+async function isAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const user = await storage.getAppUserById(req.session.userId);
+  if (user?.role !== 'admin') {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  return next();
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -99,15 +111,15 @@ export async function registerRoutes(
     res.json({ user: { ...user, password: undefined } });
   });
 
-  // === APP USERS ===
-  app.get(api.appUsers.list.path, isAuthenticated, async (req, res) => {
+  // === APP USERS (Admin only) ===
+  app.get(api.appUsers.list.path, isAdmin, async (req, res) => {
     const users = await storage.getAllAppUsers();
     // Remove passwords from response
     const safeUsers = users.map(u => ({ ...u, password: undefined }));
     res.json(safeUsers);
   });
 
-  app.post(api.appUsers.create.path, isAuthenticated, async (req, res) => {
+  app.post(api.appUsers.create.path, isAdmin, async (req, res) => {
     try {
       const input = api.appUsers.create.input.parse(req.body);
       
@@ -130,26 +142,26 @@ export async function registerRoutes(
     }
   });
 
-  app.patch(api.appUsers.updateRole.path, isAuthenticated, async (req, res) => {
+  app.patch(api.appUsers.updateRole.path, isAdmin, async (req, res) => {
     const id = Number(req.params.id);
     const role = req.body.role;
     const user = await storage.updateAppUserRole(id, role);
     res.json({ ...user, password: undefined });
   });
 
-  app.delete(api.appUsers.delete.path, isAuthenticated, async (req, res) => {
+  app.delete(api.appUsers.delete.path, isAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await storage.deleteAppUser(id);
     res.status(204).send();
   });
 
-  // === CATEGORIES ===
+  // === CATEGORIES (Admin only for create/update/delete) ===
   app.get(api.categories.list.path, isAuthenticated, async (req, res) => {
     const list = await storage.getCategories();
     res.json(list);
   });
 
-  app.post(api.categories.create.path, isAuthenticated, async (req, res) => {
+  app.post(api.categories.create.path, isAdmin, async (req, res) => {
     try {
       const input = api.categories.create.input.parse(req.body);
       const category = await storage.createCategory(input);
