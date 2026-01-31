@@ -11,7 +11,10 @@ import { authStorage } from "./replit_integrations/auth/storage";
 export interface IStorage {
   // App Users
   getAppUser(authId: string): Promise<AppUser | undefined>;
+  getAppUserByEmail(email: string): Promise<AppUser | undefined>;
   createAppUser(authId: string, role?: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
+  createAppUserManual(email: string, name: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
+  linkAppUserToAuth(id: number, authId: string): Promise<AppUser>;
   getAllAppUsers(): Promise<(AppUser & { email: string | null, name: string | null })[]>;
   updateAppUserRole(id: number, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser>;
   deleteAppUser(id: number): Promise<void>;
@@ -63,8 +66,23 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getAppUserByEmail(email: string): Promise<AppUser | undefined> {
+    const [user] = await db.select().from(appUsers).where(eq(appUsers.email, email));
+    return user;
+  }
+
   async createAppUser(authId: string, role: "admin" | "hr" | "manager" | "data_entry" = "data_entry"): Promise<AppUser> {
     const [user] = await db.insert(appUsers).values({ authId, role }).returning();
+    return user;
+  }
+
+  async createAppUserManual(email: string, name: string, role: "admin" | "hr" | "manager" | "data_entry"): Promise<AppUser> {
+    const [user] = await db.insert(appUsers).values({ email, name, role }).returning();
+    return user;
+  }
+
+  async linkAppUserToAuth(id: number, authId: string): Promise<AppUser> {
+    const [user] = await db.update(appUsers).set({ authId }).where(eq(appUsers.id, id)).returning();
     return user;
   }
 
@@ -72,14 +90,23 @@ export class DatabaseStorage implements IStorage {
     const appUsersList = await db.select().from(appUsers);
     const result = [];
     
-    // Enrich with auth data
+    // Enrich with auth data if available, otherwise use stored email/name
     for (const appUser of appUsersList) {
-      const authUser = await authStorage.getUser(appUser.authId);
-      result.push({
-        ...appUser,
-        email: authUser?.email || null,
-        name: authUser ? `${authUser.firstName || ''} ${authUser.lastName || ''}`.trim() : null,
-      });
+      if (appUser.authId) {
+        const authUser = await authStorage.getUser(appUser.authId);
+        result.push({
+          ...appUser,
+          email: authUser?.email || appUser.email || null,
+          name: authUser ? `${authUser.firstName || ''} ${authUser.lastName || ''}`.trim() : appUser.name || null,
+        });
+      } else {
+        // Manually created user without auth link
+        result.push({
+          ...appUser,
+          email: appUser.email || null,
+          name: appUser.name || null,
+        });
+      }
     }
     return result;
   }

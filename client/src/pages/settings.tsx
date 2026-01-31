@@ -71,9 +71,40 @@ function useDeleteUser() {
   });
 }
 
+function useCreateUser() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (data: { email: string; name: string; role: string }) => {
+      const res = await fetch(api.appUsers.create.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.appUsers.list.path] });
+      toast({ title: "User created", description: "The user can now log in with their assigned role.", variant: "default" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
 export default function SettingsPage() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<string>("data_entry");
   
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const { data: appUsers, isLoading: usersLoading } = useAppUsers();
@@ -81,6 +112,7 @@ export default function SettingsPage() {
   const updateCategoryMutation = useUpdateCategory();
   const updateRoleMutation = useUpdateUserRole();
   const deleteUserMutation = useDeleteUser();
+  const createUserMutation = useCreateUser();
 
   const handleToggleCategory = (id: number, currentEnabled: boolean) => {
     updateCategoryMutation.mutate({ id, data: { isEnabled: !currentEnabled } });
@@ -187,9 +219,76 @@ export default function SettingsPage() {
 
         <TabsContent value="users" className="mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>Manage user roles and permissions.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>Manage user roles and permissions.</CardDescription>
+              </div>
+              <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" data-testid="button-add-user">
+                    <Plus className="w-4 h-4 mr-1" /> Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newUserEmail.trim() || !newUserName.trim()) return;
+                    createUserMutation.mutate({ email: newUserEmail, name: newUserName, role: newUserRole }, {
+                      onSuccess: () => {
+                        setIsUserDialogOpen(false);
+                        setNewUserEmail("");
+                        setNewUserName("");
+                        setNewUserRole("data_entry");
+                      }
+                    });
+                  }} className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="userName">Name</Label>
+                      <Input 
+                        id="userName"
+                        placeholder="John Doe"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        data-testid="input-user-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userEmail">Email</Label>
+                      <Input 
+                        id="userEmail"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        data-testid="input-user-email"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userRole">Role</Label>
+                      <Select value={newUserRole} onValueChange={setNewUserRole}>
+                        <SelectTrigger data-testid="select-user-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="hr">HR</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="data_entry">Data Entry</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={createUserMutation.isPending} data-testid="button-create-user">
+                        {createUserMutation.isPending ? "Creating..." : "Create User"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {usersLoading ? (

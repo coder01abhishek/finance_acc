@@ -315,6 +315,19 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    create: {
+      method: 'POST' as const,
+      path: '/api/admin/users',
+      input: z.object({
+        email: z.string().email(),
+        name: z.string().min(1),
+        role: z.enum(["admin", "hr", "manager", "data_entry"]),
+      }),
+      responses: {
+        201: z.custom<typeof appUsers.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
   }
 };
 

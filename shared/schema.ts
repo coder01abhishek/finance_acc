@@ -23,10 +23,16 @@ export const currencyEnum = pgEnum("currency", ["INR", "USD", "EUR", "GBP", "AED
 
 export const appUsers = pgTable("app_users", {
   id: serial("id").primaryKey(),
-  authId: text("auth_id").notNull().unique(), // Links to users.id from auth
+  authId: text("auth_id").unique(), // Links to users.id from auth (null for manually created users)
+  email: text("email").unique(), // Email for matching when user logs in
+  name: text("name"), // Display name
   role: userRoleEnum("role").default("data_entry").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
 });
+
+export const insertAppUserSchema = createInsertSchema(appUsers).omit({ id: true });
+export type InsertAppUser = z.infer<typeof insertAppUserSchema>;
+export type AppUser = typeof appUsers.$inferSelect;
 
 // CATEGORIES
 export const categories = pgTable("categories", {
@@ -186,7 +192,6 @@ export type InvoiceItem = typeof invoiceItems.$inferSelect;
 export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
 export type Goal = typeof goals.$inferSelect;
 export type InsertGoal = z.infer<typeof insertGoalSchema>;
-export type AppUser = typeof appUsers.$inferSelect;
 
 // ENRICHED TYPES FOR API
 export interface InvoiceWithItems extends Invoice {

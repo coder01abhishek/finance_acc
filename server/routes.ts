@@ -18,9 +18,19 @@ export async function registerRoutes(
   // === APP USERS ===
   app.get(api.appUsers.me.path, isAuthenticated, async (req: any, res) => {
     const authId = req.user.claims.sub;
+    const email = req.user.claims.email;
     let appUser = await storage.getAppUser(authId);
     
-    // Auto-create if not exists (first user is admin?)
+    // Check if there's a manually created user with this email that needs linking
+    if (!appUser && email) {
+      const emailUser = await storage.getAppUserByEmail(email);
+      if (emailUser && !emailUser.authId) {
+        // Link the existing user record to this auth account
+        appUser = await storage.linkAppUserToAuth(emailUser.id, authId);
+      }
+    }
+    
+    // Auto-create if not exists (first user is admin)
     if (!appUser) {
         const allUsers = await storage.getAllAppUsers();
         const role = allUsers.length === 0 ? "admin" : "data_entry";
@@ -33,6 +43,26 @@ export async function registerRoutes(
   app.get(api.appUsers.list.path, isAuthenticated, async (req, res) => {
     const users = await storage.getAllAppUsers();
     res.json(users);
+  });
+
+  app.post(api.appUsers.create.path, isAuthenticated, async (req, res) => {
+    try {
+      const input = api.appUsers.create.input.parse(req.body);
+      
+      // Check if user with this email already exists
+      const existingUser = await storage.getAppUserByEmail(input.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "A user with this email already exists" });
+      }
+      
+      const user = await storage.createAppUserManual(input.email, input.name, input.role);
+      res.status(201).json(user);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
   });
 
   app.patch(api.appUsers.updateRole.path, isAuthenticated, async (req, res) => {
