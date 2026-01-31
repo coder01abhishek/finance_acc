@@ -98,7 +98,7 @@ export default function AccountsPage() {
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent position="popper" className="z-[100] bg-popover">
+                        <SelectContent>
                           <SelectItem value="current">Current/Checking</SelectItem>
                           <SelectItem value="od_cc">Credit Card / Overdraft</SelectItem>
                           <SelectItem value="cash">Cash in Hand</SelectItem>
