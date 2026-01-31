@@ -25,13 +25,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 
+// Navigation items with role-based access
+// roles: which roles can see this item (empty = all roles)
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/transactions", label: "Transactions", icon: Receipt },
-  { href: "/accounts", label: "Accounts", icon: Wallet },
-  { href: "/invoices", label: "Invoicing", icon: FileText },
-  { href: "/reports", label: "Reports", icon: PieChart },
-  { href: "/goals", label: "Goals", icon: Target },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: [] }, // All roles
+  { href: "/transactions", label: "Transactions", icon: Receipt, roles: ['admin', 'hr', 'data_entry'] },
+  { href: "/accounts", label: "Accounts", icon: Wallet, roles: ['admin', 'hr'] },
+  { href: "/invoices", label: "Invoicing", icon: FileText, roles: ['admin', 'manager'] },
+  { href: "/reports", label: "Reports", icon: PieChart, roles: ['admin', 'manager'] },
+  { href: "/goals", label: "Goals", icon: Target, roles: ['admin', 'manager'] },
 ];
 
 function useChangePassword() {
@@ -82,25 +84,27 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       </div>
       
       <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location === item.href;
-          return (
-            <Link key={item.href} href={item.href}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
-                  isActive 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                onClick={() => setIsMobileOpen(false)}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </div>
-            </Link>
-          );
-        })}
+        {navItems
+          .filter((item) => item.roles.length === 0 || item.roles.includes(user?.role || ''))
+          .map((item) => {
+            const isActive = location === item.href;
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                    isActive 
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                </div>
+              </Link>
+            );
+          })}
         
         {/* Settings at the bottom of list - Admin only */}
         {user?.role === 'admin' && (
