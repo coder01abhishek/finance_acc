@@ -46,8 +46,10 @@ export default function AccountsPage() {
   const getIcon = (type: string) => {
     switch(type) {
       case 'current': return Landmark;
+      case 'savings': return Wallet;
       case 'od_cc': return CreditCard;
       case 'cash': return Banknote;
+      case 'upi': return Wallet;
       default: return Wallet;
     }
   };
@@ -99,8 +101,9 @@ export default function AccountsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="current">Current/Checking</SelectItem>
-                          <SelectItem value="od_cc">Credit Card / Overdraft</SelectItem>
+                          <SelectItem value="current">Current</SelectItem>
+                          <SelectItem value="savings">Savings</SelectItem>
+                          <SelectItem value="od_cc">Overdraft / Credit Card</SelectItem>
                           <SelectItem value="cash">Cash in Hand</SelectItem>
                           <SelectItem value="upi">UPI / Digital Wallet</SelectItem>
                         </SelectContent>

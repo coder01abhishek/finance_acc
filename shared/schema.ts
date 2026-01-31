@@ -9,7 +9,7 @@ export * from "./models/auth";
 
 // ENUMS
 export const transactionTypeEnum = pgEnum("transaction_type", ["income", "expense", "transfer", "opening_balance"]);
-export const accountTypeEnum = pgEnum("account_type", ["current", "od_cc", "cash", "upi"]);
+export const accountTypeEnum = pgEnum("account_type", ["current", "savings", "od_cc", "cash", "upi"]);
 export const transactionStatusEnum = pgEnum("transaction_status", ["draft", "submitted", "approved", "rejected"]);
 export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "sent", "paid", "overdue"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "hr", "manager", "data_entry"]);
