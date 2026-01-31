@@ -102,10 +102,10 @@ function useResetPassword() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ userId, newPassword }: { userId: number; newPassword: string }) => {
-      const res = await fetch(api.auth.resetPassword.path, {
+      const res = await fetch(api.auth.resetPassword.path.replace(':id', String(userId)), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, newPassword }),
+        body: JSON.stringify({ newPassword }),
         credentials: "include",
       });
       if (!res.ok) {
