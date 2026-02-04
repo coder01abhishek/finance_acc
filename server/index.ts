@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { serveStatic } from "./static";
+import path from "path";
+// import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
@@ -73,12 +74,23 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
+  // if (process.env.NODE_ENV === "production") {
+  //   serveStatic(app);
+  // } else {
+  //   const { setupVite } = await import("./vite");
+  //   await setupVite(httpServer, app);
+  // }
+
   if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
+  // Ensure this points to where your Vite build output is located
+  const publicPath = path.join(__dirname, "..", "dist", "public");
+  app.use(express.static(publicPath));
+
+  // Catch-all route to serve index.html for client-side routing
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(publicPath, "index.html"));
+  });
+}
 
   // IMPORTANT: Only use httpServer.listen when NOT on Vercel (Local Development)
   if (process.env.NODE_ENV !== "production") {
