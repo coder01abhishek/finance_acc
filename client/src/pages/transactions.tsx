@@ -3,8 +3,8 @@ import { useTransactions, useCategories, useAccounts, useCreateTransaction, useA
 import { useAuth } from "@/hooks/use-simple-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter 
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,11 +20,26 @@ import { useQuery } from "@tanstack/react-query";
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"];
 
+// const formSchema = z.object({
+//   dateStr: z.string().min(1, "Date is required"),
+//   type: z.enum(["income", "expense", "transfer", "opening_balance"]),
+//   originalAmount: z.string().min(1, "Amount is required"),
+//   originalCurrency: z.string().default("INR"),
+//   exchangeRateToInr: z.string().default("1"),
+//   accountId: z.string().min(1, "Account is required"),
+//   categoryId: z.string().optional(),
+//   toAccountId: z.string().optional(),
+//   description: z.string().optional(),
+//   notes: z.string().optional(),
+//   status: z.enum(["draft", "submitted", "approved", "rejected"]).default("draft"),
+// });
+
 const formSchema = z.object({
   dateStr: z.string().min(1, "Date is required"),
   type: z.enum(["income", "expense", "transfer", "opening_balance"]),
   originalAmount: z.string().min(1, "Amount is required"),
-  originalCurrency: z.string().default("INR"),
+  // CHANGE THIS LINE: Use z.enum to match the allowed currencies
+  originalCurrency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"]).default("INR"),
   exchangeRateToInr: z.string().default("1"),
   accountId: z.string().min(1, "Account is required"),
   categoryId: z.string().optional(),
@@ -40,19 +55,19 @@ export default function TransactionsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [isFetchingRate, setIsFetchingRate] = useState(false);
   const { user } = useAuth();
-  
+
   // Role-based permissions
   const canCreateTransactions = ['admin', 'hr', 'data_entry'].includes(user?.role || '');
   const canApprove = user?.role === 'admin';
   const isDataEntry = user?.role === 'data_entry';
-  
-  const { data: transactions, isLoading } = useTransactions({ 
+
+  const { data: transactions, isLoading } = useTransactions({
     month: filterMonth || undefined,
     status: filterStatus || undefined
   });
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
-  
+
   const createMutation = useCreateTransaction();
   const approveMutation = useApproveTransaction();
   const deleteMutation = useDeleteTransaction();
@@ -77,8 +92,8 @@ export default function TransactionsPage() {
   const watchAmount = form.watch("originalAmount");
   const watchRate = form.watch("exchangeRateToInr");
 
-  const calculatedInr = watchAmount && watchRate 
-    ? (parseFloat(watchAmount) * parseFloat(watchRate)).toFixed(2) 
+  const calculatedInr = watchAmount && watchRate
+    ? (parseFloat(watchAmount) * parseFloat(watchRate)).toFixed(2)
     : "0.00";
 
   const fetchExchangeRate = async (currency: string) => {
@@ -86,7 +101,7 @@ export default function TransactionsPage() {
       form.setValue("exchangeRateToInr", "1");
       return;
     }
-    
+
     setIsFetchingRate(true);
     try {
       const res = await fetch(`/api/exchange-rate/${currency}`);
@@ -107,16 +122,42 @@ export default function TransactionsPage() {
     }
   }, [watchCurrency]);
 
+  // const onSubmit = (values: z.infer<typeof formSchema>) => {
+  //   createMutation.mutate({
+  //     ...values,
+  //     date: new Date(values.dateStr),
+  //     originalAmount: values.originalAmount,
+  //     originalCurrency: values.originalCurrency,
+  //     exchangeRateToInr: values.exchangeRateToInr,
+  //     accountId: parseInt(values.accountId as string),
+  //     categoryId: values.categoryId ? parseInt(values.categoryId as string) : undefined,
+  //     toAccountId: values.toAccountId ? parseInt(values.toAccountId as string) : undefined,
+  //   }, {
+  //     onSuccess: () => {
+  //       setIsOpen(false);
+  //       form.reset();
+  //     }
+  //   });
+  // };
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Calculate the INR amount locally for the submission
+    const rate = parseFloat(values.exchangeRateToInr || "1");
+    const amountInInr = (parseFloat(values.originalAmount) * rate).toFixed(2);
+
     createMutation.mutate({
       ...values,
       date: new Date(values.dateStr),
       originalAmount: values.originalAmount,
-      originalCurrency: values.originalCurrency,
+      originalCurrency: values.originalCurrency as any,
       exchangeRateToInr: values.exchangeRateToInr,
       accountId: parseInt(values.accountId as string),
       categoryId: values.categoryId ? parseInt(values.categoryId as string) : undefined,
       toAccountId: values.toAccountId ? parseInt(values.toAccountId as string) : undefined,
+
+      // FIX: Add these two missing required fields
+      amountInInr: amountInInr,
+      createdBy: user?.id?.toString() || "0", // Pass the current user's ID
     }, {
       onSuccess: () => {
         setIsOpen(false);
@@ -143,18 +184,18 @@ export default function TransactionsPage() {
         </div>
         <div className="flex gap-2">
           <Select onValueChange={setFilterStatus} value={filterStatus}>
-             <SelectTrigger className="w-[140px]">
-               <Filter className="w-4 h-4 mr-2" />
-               <SelectValue placeholder="Status" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">All Status</SelectItem>
-               <SelectItem value="draft">Draft</SelectItem>
-               <SelectItem value="submitted">Submitted</SelectItem>
-               <SelectItem value="approved">Approved</SelectItem>
-             </SelectContent>
+            <SelectTrigger className="w-[140px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="submitted">Submitted</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+            </SelectContent>
           </Select>
-          
+
           {canCreateTransactions && (
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
@@ -162,166 +203,79 @@ export default function TransactionsPage() {
                   <Plus className="w-4 h-4" /> Add Transaction
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>New Transaction</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="dateStr"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} data-testid="input-tx-date" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-tx-type">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="income">Income</SelectItem>
-                              <SelectItem value="expense">Expense</SelectItem>
-                              <SelectItem value="transfer">Transfer</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="originalAmount"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel>Amount</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} data-testid="input-tx-amount" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="originalCurrency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Currency</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-tx-currency">
-                                <SelectValue placeholder="Currency" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {CURRENCIES.map(c => (
-                                <SelectItem key={c} value={c}>{c}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {watchCurrency !== "INR" && (
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Exchange Rate (1 {watchCurrency} = INR)</span>
-                        <div className="flex items-center gap-2">
-                          <FormField
-                            control={form.control}
-                            name="exchangeRateToInr"
-                            render={({ field }) => (
-                              <Input 
-                                type="number" 
-                                step="0.0001" 
-                                className="w-28 h-8 text-right" 
-                                {...field}
-                                data-testid="input-exchange-rate"
-                              />
-                            )}
-                          />
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => fetchExchangeRate(watchCurrency)}
-                            disabled={isFetchingRate}
-                          >
-                            <RefreshCw className={`w-4 h-4 ${isFetchingRate ? 'animate-spin' : ''}`} />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <span className="text-sm font-medium">Amount in INR</span>
-                        <span className="text-lg font-bold text-primary" data-testid="text-amount-inr">
-                          {formatCurrency(calculatedInr, "INR")}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                     <FormField
-                      control={form.control}
-                      name="accountId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Account</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-tx-account">
-                                <SelectValue placeholder="Select account" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {accounts?.map(acc => (
-                                <SelectItem key={acc.id} value={acc.id.toString()}>{acc.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("type") !== "transfer" && (
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>New Transaction</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="categoryId"
+                        name="dateStr"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                            <FormLabel>Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} data-testid="input-tx-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-tx-category">
-                                  <SelectValue placeholder="Select category" />
+                                <SelectTrigger data-testid="select-tx-type">
+                                  <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {categories?.map(cat => (
-                                  <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
+                                <SelectItem value="income">Income</SelectItem>
+                                <SelectItem value="expense">Expense</SelectItem>
+                                <SelectItem value="transfer">Transfer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="originalAmount"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Amount</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" placeholder="0.00" {...field} data-testid="input-tx-amount" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="originalCurrency"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Currency</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-tx-currency">
+                                  <SelectValue placeholder="Currency" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {CURRENCIES.map(c => (
+                                  <SelectItem key={c} value={c}>{c}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -329,19 +283,57 @@ export default function TransactionsPage() {
                           </FormItem>
                         )}
                       />
+                    </div>
+
+                    {watchCurrency !== "INR" && (
+                      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Exchange Rate (1 {watchCurrency} = INR)</span>
+                          <div className="flex items-center gap-2">
+                            <FormField
+                              control={form.control}
+                              name="exchangeRateToInr"
+                              render={({ field }) => (
+                                <Input
+                                  type="number"
+                                  step="0.0001"
+                                  className="w-28 h-8 text-right"
+                                  {...field}
+                                  data-testid="input-exchange-rate"
+                                />
+                              )}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => fetchExchangeRate(watchCurrency)}
+                              disabled={isFetchingRate}
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isFetchingRate ? 'animate-spin' : ''}`} />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                          <span className="text-sm font-medium">Amount in INR</span>
+                          <span className="text-lg font-bold text-primary" data-testid="text-amount-inr">
+                            {formatCurrency(calculatedInr, "INR")}
+                          </span>
+                        </div>
+                      </div>
                     )}
 
-                    {form.watch("type") === "transfer" && (
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="toAccountId"
+                        name="accountId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>To Account</FormLabel>
+                            <FormLabel>Account</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Destination" />
+                                <SelectTrigger data-testid="select-tx-account">
+                                  <SelectValue placeholder="Select account" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -354,46 +346,95 @@ export default function TransactionsPage() {
                           </FormItem>
                         )}
                       />
-                    )}
-                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input placeholder="What was this for?" {...field} value={field.value || ''} data-testid="input-tx-description" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      {form.watch("type") !== "transfer" && (
+                        <FormField
+                          control={form.control}
+                          name="categoryId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Category</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-tx-category">
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {categories?.map(cat => (
+                                    <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Additional details..." {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      {form.watch("type") === "transfer" && (
+                        <FormField
+                          control={form.control}
+                          name="toAccountId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>To Account</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Destination" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {accounts?.map(acc => (
+                                    <SelectItem key={acc.id} value={acc.id.toString()}>{acc.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
 
-                  <DialogFooter>
-                    <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-transaction">
-                      {createMutation.isPending ? "Creating..." : "Create Transaction"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input placeholder="What was this for?" {...field} value={field.value || ''} data-testid="input-tx-description" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Additional details..." {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <DialogFooter>
+                      <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-transaction">
+                        {createMutation.isPending ? "Creating..." : "Create Transaction"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
@@ -433,9 +474,9 @@ export default function TransactionsPage() {
                   </td>
                   <td className="px-6 py-4">
                     {tx.category ? (
-                       <Badge variant="outline" className="font-normal">{tx.category.name}</Badge>
+                      <Badge variant="outline" className="font-normal">{tx.category.name}</Badge>
                     ) : (
-                       <span className="text-muted-foreground">-</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-muted-foreground">{tx.account?.name}</td>
@@ -459,9 +500,9 @@ export default function TransactionsPage() {
                     <div className="flex justify-end gap-1">
                       {tx.status === 'submitted' && canApprove && (
                         <>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                             onClick={() => approveMutation.mutate(tx.id)}
                             disabled={approveMutation.isPending}
@@ -477,9 +518,9 @@ export default function TransactionsPage() {
                       {tx.status !== 'approved' && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                               data-testid={`button-delete-${tx.id}`}
                             >
@@ -495,7 +536,7 @@ export default function TransactionsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
+                              <AlertDialogAction
                                 onClick={() => deleteMutation.mutate(tx.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
@@ -524,7 +565,7 @@ function StatusBadge({ status }: { status: string }) {
     approved: "bg-emerald-100 text-emerald-600 border-emerald-200",
     rejected: "bg-rose-100 text-rose-600 border-rose-200",
   };
-  
+
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || styles.draft}`}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
