@@ -82,15 +82,15 @@ app.use((req, res, next) => {
   // }
 
   if (process.env.NODE_ENV === "production") {
-  // Ensure this points to where your Vite build output is located
-  const publicPath = path.join(__dirname, "..", "dist", "public");
-  app.use(express.static(publicPath));
+    // Use path.resolve to find the dist folder correctly in Vercel
+    const publicPath = path.resolve(__dirname, "../dist");
 
-  // Catch-all route to serve index.html for client-side routing
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(publicPath, "index.html"));
-  });
-}
+    app.use(express.static(publicPath));
+
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(publicPath, "index.html"));
+    });
+  }
 
   // IMPORTANT: Only use httpServer.listen when NOT on Vercel (Local Development)
   if (process.env.NODE_ENV !== "production") {
