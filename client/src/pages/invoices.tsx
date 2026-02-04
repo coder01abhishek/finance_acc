@@ -52,7 +52,7 @@ export default function InvoicesPage() {
         status: "draft",
         totalAmount: "0"
       },
-      items: [{ description: "", quantity: "1", price: "0", amount: "0" }]
+      items: [{ description: "", quantity: "1", price: "0", amount: "0" } as any]
     }
   });
 
@@ -75,7 +75,7 @@ export default function InvoicesPage() {
       items: values.items.map(item => ({ 
         ...item, 
         amount: (Number(item.quantity) * Number(item.price)).toFixed(2) 
-      }))
+      })) as any
     }, {
       onSuccess: () => {
         setIsOpen(false);
@@ -240,7 +240,7 @@ export default function InvoicesPage() {
                         </Button>
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ description: "", quantity: "1", price: "0", amount: "0" })}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ description: "", quantity: "1", price: "0", amount: "0" }) as any}>
                       Add Item
                     </Button>
                   </div>
