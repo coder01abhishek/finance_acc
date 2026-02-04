@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { 
+import {
   appUsers, categories, accounts, transactions, clients, invoices, invoiceItems, goals,
   type AppUser, type Category, type Account, type Transaction, type Client, type Invoice, type InvoiceItem, type Goal,
   type InsertCategory, type InsertAccount, type InsertTransaction, type InsertClient, type InsertInvoice, type InsertInvoiceItem, type InsertGoal,
@@ -38,7 +38,7 @@ export interface IStorage {
   updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction>;
   approveTransaction(id: number, approvedBy: string): Promise<Transaction>;
   deleteTransaction(id: number): Promise<void>;
-  
+
   // Clients
   getClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
@@ -53,7 +53,7 @@ export interface IStorage {
   // Goals
   getGoals(): Promise<Goal[]>;
   createGoal(goal: InsertGoal): Promise<Goal>;
-  
+
   // Stats
   getDashboardStats(month?: string): Promise<any>;
 }
@@ -147,9 +147,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   // === TRANSACTIONS ===
+  // async getTransactions(filters?: { month?: string, accountId?: number, categoryId?: number, status?: string }): Promise<TransactionWithDetails[]> {
+  //   let conditions = [];
+
+  //   if (filters?.month) {
+  //     const start = new Date(`${filters.month}-01`);
+  //     const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  //     conditions.push(and(gte(transactions.date, start), lte(transactions.date, end)));
+  //   }
+  //   if (filters?.accountId) conditions.push(eq(transactions.accountId, filters.accountId));
+  //   if (filters?.categoryId) conditions.push(eq(transactions.categoryId, filters.categoryId));
+  //   if (filters?.status) conditions.push(eq(transactions.status, filters.status as any));
+
+  //   const result = await db.query.transactions.findMany({
+  //     where: conditions.length ? and(...conditions) : undefined,
+  //     orderBy: [desc(transactions.date)],
+  //     with: {
+  //       category: true,
+  //       account: true,
+  //       toAccount: true,
+  //     }
+  //   });
+
+  //   return result;
+  // }
+
+  // --- server/storage.ts ---
+
   async getTransactions(filters?: { month?: string, accountId?: number, categoryId?: number, status?: string }): Promise<TransactionWithDetails[]> {
     let conditions = [];
-    
+
     if (filters?.month) {
       const start = new Date(`${filters.month}-01`);
       const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
@@ -169,7 +196,8 @@ export class DatabaseStorage implements IStorage {
       }
     });
 
-    return result;
+    // CHANGE THIS LINE: Add the type cast to satisfy the compiler
+    return result as unknown as TransactionWithDetails[];
   }
 
   async getTransaction(id: number): Promise<Transaction | undefined> {
@@ -179,12 +207,12 @@ export class DatabaseStorage implements IStorage {
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     const [newTransaction] = await db.insert(transactions).values(transaction).returning();
-    
+
     // Update account balances if approved
     if (newTransaction.status === 'approved') {
-        await this.updateAccountBalances(newTransaction);
+      await this.updateAccountBalances(newTransaction);
     }
-    
+
     return newTransaction;
   }
 
@@ -194,7 +222,7 @@ export class DatabaseStorage implements IStorage {
 
     // Handle balance updates if status changed to approved
     if (oldTransaction.status !== 'approved' && updatedTransaction.status === 'approved') {
-        await this.updateAccountBalances(updatedTransaction);
+      await this.updateAccountBalances(updatedTransaction);
     }
     // Handle balance rollback if status changed from approved (e.g. to draft/rejected) - Complexity!
     // For MVP, we assume approvals are final or manually reversed. 
@@ -226,19 +254,19 @@ export class DatabaseStorage implements IStorage {
   async deleteTransaction(id: number): Promise<void> {
     await db.delete(transactions).where(eq(transactions.id, id));
   }
-  
+
   private async updateAccountBalances(tx: Transaction) {
     const amount = Number(tx.amountInInr);
-    
+
     if (tx.type === 'income') {
-        await db.execute(sql`UPDATE accounts SET current_balance = current_balance + ${amount} WHERE id = ${tx.accountId}`);
+      await db.execute(sql`UPDATE accounts SET current_balance = current_balance + ${amount} WHERE id = ${tx.accountId}`);
     } else if (tx.type === 'expense') {
-        await db.execute(sql`UPDATE accounts SET current_balance = current_balance - ${amount} WHERE id = ${tx.accountId}`);
+      await db.execute(sql`UPDATE accounts SET current_balance = current_balance - ${amount} WHERE id = ${tx.accountId}`);
     } else if (tx.type === 'transfer' && tx.toAccountId) {
-        await db.execute(sql`UPDATE accounts SET current_balance = current_balance - ${amount} WHERE id = ${tx.accountId}`);
-        await db.execute(sql`UPDATE accounts SET current_balance = current_balance + ${amount} WHERE id = ${tx.toAccountId}`);
+      await db.execute(sql`UPDATE accounts SET current_balance = current_balance - ${amount} WHERE id = ${tx.accountId}`);
+      await db.execute(sql`UPDATE accounts SET current_balance = current_balance + ${amount} WHERE id = ${tx.toAccountId}`);
     } else if (tx.type === 'opening_balance') {
-         await db.execute(sql`UPDATE accounts SET opening_balance = opening_balance + ${amount}, current_balance = current_balance + ${amount} WHERE id = ${tx.accountId}`);
+      await db.execute(sql`UPDATE accounts SET opening_balance = opening_balance + ${amount}, current_balance = current_balance + ${amount} WHERE id = ${tx.accountId}`);
     }
   }
 
@@ -279,12 +307,12 @@ export class DatabaseStorage implements IStorage {
 
   async createInvoice(invoice: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice> {
     const [newInvoice] = await db.insert(invoices).values(invoice).returning();
-    
+
     if (items.length > 0) {
       const itemsWithId = items.map(item => ({ ...item, invoiceId: newInvoice.id }));
       await db.insert(invoiceItems).values(itemsWithId);
     }
-    
+
     return newInvoice;
   }
 
@@ -308,12 +336,12 @@ export class DatabaseStorage implements IStorage {
     // Current Balance (Total Available Funds)
     const accountsList = await this.getAccounts();
     const totalAvailableFunds = accountsList.reduce((sum, acc) => sum + Number(acc.currentBalance), 0);
-    
+
     // OD Limit (Mock logic for now, or derive from specific OD account type)
     const odAccount = accountsList.find(a => a.type === 'od_cc');
     const odLimitUsed = odAccount ? Math.abs(Math.min(0, Number(odAccount.currentBalance))) : 0;
     const odLimitRemaining = 500000 - odLimitUsed; // Assuming 5 Lakh limit for example
-    
+
     // Month logic
     const today = new Date();
     const targetDate = month ? new Date(`${month}-01`) : today;
@@ -323,13 +351,13 @@ export class DatabaseStorage implements IStorage {
     // Profit/Loss for Month
     // Sum Income - Sum Expense (Approved only)
     const monthlyTx = await db.select().from(transactions).where(
-        and(
-            gte(transactions.date, startOfMonth),
-            lte(transactions.date, endOfMonth),
-            eq(transactions.status, 'approved')
-        )
+      and(
+        gte(transactions.date, startOfMonth),
+        lte(transactions.date, endOfMonth),
+        eq(transactions.status, 'approved')
+      )
     );
-    
+
     const income = monthlyTx.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amountInInr), 0);
     const expense = monthlyTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amountInInr), 0);
     const currentMonthProfitLoss = income - expense;
@@ -337,24 +365,24 @@ export class DatabaseStorage implements IStorage {
     // Top Expenses
     const expensesByCategory = new Map<string, number>();
     for (const tx of monthlyTx) {
-        if (tx.type === 'expense' && tx.categoryId) {
-            const category = await this.getCategory(tx.categoryId);
-            const name = category?.name || 'Unknown';
-            expensesByCategory.set(name, (expensesByCategory.get(name) || 0) + Number(tx.amountInInr));
-        }
+      if (tx.type === 'expense' && tx.categoryId) {
+        const category = await this.getCategory(tx.categoryId);
+        const name = category?.name || 'Unknown';
+        expensesByCategory.set(name, (expensesByCategory.get(name) || 0) + Number(tx.amountInInr));
+      }
     }
     const topExpenses = Array.from(expensesByCategory.entries())
-        .map(([category, amount]) => ({ category, amount }))
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 5);
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
 
     return {
-        currentMonthProfitLoss,
-        totalAvailableFunds,
-        odLimitUsed,
-        odLimitRemaining,
-        topExpenses,
-        revenueByService: [] // Implement if needed
+      currentMonthProfitLoss,
+      totalAvailableFunds,
+      odLimitUsed,
+      odLimitRemaining,
+      topExpenses,
+      revenueByService: [] // Implement if needed
     };
   }
 }

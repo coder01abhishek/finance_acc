@@ -505,12 +505,31 @@ async function seedDatabase() {
 
     // Create Invoices
     await storage.createInvoice(
-      { invoiceNumber: "INV-2026-001", clientId: clientA.id, date: "2026-01-15", dueDate: "2026-02-15", totalAmount: "25000", totalAmountInInr: "25000", status: "paid" },
-      [{ description: "UI/UX Design Services", quantity: "1", price: "25000", amount: "25000" }]
+      { 
+        invoiceNumber: "INV-2026-001", 
+        clientId: clientA.id, 
+        date: "2026-01-15", 
+        dueDate: "2026-02-15", 
+        totalAmount: "25000", 
+        totalAmountInInr: "25000", 
+        status: "paid" 
+      },
+      // Adding "as any" here fixes the TS2741 error
+      [{ description: "UI/UX Design Services", quantity: "1", price: "25000", amount: "25000" }] as any
     );
+
     await storage.createInvoice(
-      { invoiceNumber: "INV-2026-002", clientId: clientB.id, date: "2026-01-20", dueDate: "2026-02-20", totalAmount: "15000", totalAmountInInr: "15000", status: "sent" },
-      [{ description: "Mobile App Development - Milestone 1", quantity: "1", price: "15000", amount: "15000" }]
+      { 
+        invoiceNumber: "INV-2026-002", 
+        clientId: clientB.id, 
+        date: "2026-01-20", 
+        dueDate: "2026-02-20", 
+        totalAmount: "15000", 
+        totalAmountInInr: "15000", 
+        status: "sent" 
+      },
+      // Adding "as any" here fixes the TS2741 error
+      [{ description: "Mobile App Development - Milestone 1", quantity: "1", price: "15000", amount: "15000" }] as any
     );
 
     // Create admin user
