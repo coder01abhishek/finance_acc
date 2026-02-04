@@ -42,4 +42,4 @@ app.use(express.urlencoded({ extended: false }));
   }
 })();
 
-export default app; // Critical for the api/index.ts bridge
+module.exports = app;

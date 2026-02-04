@@ -1,3 +1,7 @@
-import app from '../server/index.js';
+// api/index.ts (Root Folder)
 
-export default app;
+// Use require for CommonJS compatibility
+const app = require('../server/index');
+
+// Vercel expects the function to be exported like this for CommonJS
+module.exports = app;
