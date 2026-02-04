@@ -20,26 +20,11 @@ import { useQuery } from "@tanstack/react-query";
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"];
 
-// const formSchema = z.object({
-//   dateStr: z.string().min(1, "Date is required"),
-//   type: z.enum(["income", "expense", "transfer", "opening_balance"]),
-//   originalAmount: z.string().min(1, "Amount is required"),
-//   originalCurrency: z.string().default("INR"),
-//   exchangeRateToInr: z.string().default("1"),
-//   accountId: z.string().min(1, "Account is required"),
-//   categoryId: z.string().optional(),
-//   toAccountId: z.string().optional(),
-//   description: z.string().optional(),
-//   notes: z.string().optional(),
-//   status: z.enum(["draft", "submitted", "approved", "rejected"]).default("draft"),
-// });
-
 const formSchema = z.object({
   dateStr: z.string().min(1, "Date is required"),
   type: z.enum(["income", "expense", "transfer", "opening_balance"]),
   originalAmount: z.string().min(1, "Amount is required"),
-  // CHANGE THIS LINE: Use z.enum to match the allowed currencies
-  originalCurrency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"]).default("INR"),
+  originalCurrency: z.string().default("INR"),
   exchangeRateToInr: z.string().default("1"),
   accountId: z.string().min(1, "Account is required"),
   categoryId: z.string().optional(),
@@ -141,23 +126,19 @@ export default function TransactionsPage() {
   // };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Calculate the INR amount locally for the submission
     const rate = parseFloat(values.exchangeRateToInr || "1");
     const amountInInr = (parseFloat(values.originalAmount) * rate).toFixed(2);
 
     createMutation.mutate({
       ...values,
       date: new Date(values.dateStr),
-      originalAmount: values.originalAmount,
+      // Manually add required fields from your schema
+      amountInInr: amountInInr,
+      createdBy: user?.id?.toString() || "1",
       originalCurrency: values.originalCurrency as any,
-      exchangeRateToInr: values.exchangeRateToInr,
       accountId: parseInt(values.accountId as string),
       categoryId: values.categoryId ? parseInt(values.categoryId as string) : undefined,
       toAccountId: values.toAccountId ? parseInt(values.toAccountId as string) : undefined,
-
-      // FIX: Add these two missing required fields
-      amountInInr: amountInInr,
-      createdBy: user?.id?.toString() || "0", // Pass the current user's ID
     }, {
       onSuccess: () => {
         setIsOpen(false);
