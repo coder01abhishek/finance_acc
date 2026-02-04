@@ -35,10 +35,10 @@ export default function InvoicesPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClientOpen, setIsClientOpen] = useState(false);
   const { user } = useAuth();
-  
+
   // Only admin and manager can create invoices/clients
   const canCreate = ['admin', 'manager'].includes(user?.role || '');
-  
+
   const createInvoiceMutation = useCreateInvoice();
   const createClientMutation = useCreateClient();
 
@@ -72,9 +72,9 @@ export default function InvoicesPage() {
     const total = calculateTotal();
     createInvoiceMutation.mutate({
       invoice: { ...values.invoice, clientId: parseInt(values.invoice.clientId as string), totalAmount: total },
-      items: values.items.map(item => ({ 
-        ...item, 
-        amount: (Number(item.quantity) * Number(item.price)).toFixed(2) 
+      items: values.items.map(item => ({
+        ...item,
+        amount: (Number(item.quantity) * Number(item.price)).toFixed(2)
       })) as any
     }, {
       onSuccess: () => {
@@ -106,7 +106,7 @@ export default function InvoicesPage() {
           <h2 className="text-3xl font-display font-bold tracking-tight">Invoices</h2>
           <p className="text-muted-foreground mt-1">Create and manage client invoices.</p>
         </div>
-        
+
         {canCreate && (
           <div className="flex gap-2">
             <Dialog open={isClientOpen} onOpenChange={setIsClientOpen}>
@@ -119,12 +119,12 @@ export default function InvoicesPage() {
                 <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
                 <Form {...clientForm}>
                   <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-4 py-4">
-                    <FormField control={clientForm.control} name="name" render={({field}) => (
-                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-                    )}/>
-                    <FormField control={clientForm.control} name="email" render={({field}) => (
-                      <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-                    )}/>
+                    <FormField control={clientForm.control} name="name" render={({ field }) => (
+                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={clientForm.control} name="email" render={({ field }) => (
+                      <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
                     <DialogFooter>
                       <Button type="submit">Save Client</Button>
                     </DialogFooter>
@@ -139,123 +139,129 @@ export default function InvoicesPage() {
                   <Plus className="w-4 h-4" /> Create Invoice
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>New Invoice</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onInvoiceSubmit)} className="space-y-6 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                     <FormField
-                      control={form.control}
-                      name="invoice.clientId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Client</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select client" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {clients?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="invoice.invoiceNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice #</FormLabel>
-                          <FormControl><Input {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>New Invoice</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onInvoiceSubmit)} className="space-y-6 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="invoice.clientId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Client</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select client" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {clients?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="invoice.invoiceNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Invoice #</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="invoice.date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Issue Date</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="invoice.dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <Label>Line Items</Label>
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="flex gap-2 items-end">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.description`}
-                          render={({ field }) => (
-                             <FormItem className="flex-1">
-                               <FormControl><Input placeholder="Description" {...field} /></FormControl>
-                             </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.quantity`}
-                          render={({ field }) => (
-                             <FormItem className="w-20">
-                               <FormControl><Input type="number" placeholder="Qty" {...field} /></FormControl>
-                             </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.price`}
-                          render={({ field }) => (
-                             <FormItem className="w-28">
-                               <FormControl><Input type="number" step="0.01" placeholder="Price" {...field} /></FormControl>
-                             </FormItem>
-                          )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ description: "", quantity: "1", price: "0", amount: "0" }) as any}>
-                      Add Item
-                    </Button>
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="invoice.date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Issue Date</FormLabel>
+                            <FormControl><Input type="date" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="invoice.dueDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Due Date</FormLabel>
+                            <FormControl><Input type="date" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                  <div className="flex justify-end text-lg font-bold">
-                    Total: ${calculateTotal()}
-                  </div>
+                    <div className="space-y-4">
+                      <Label>Line Items</Label>
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex gap-2 items-end">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.description`}
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormControl><Input placeholder="Description" {...field} /></FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.quantity`}
+                            render={({ field }) => (
+                              <FormItem className="w-20">
+                                <FormControl><Input type="number" placeholder="Qty" {...field} /></FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.price`}
+                            render={({ field }) => (
+                              <FormItem className="w-28">
+                                <FormControl><Input type="number" step="0.01" placeholder="Price" {...field} /></FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        // Add "as any" to the object inside append()
+                        onClick={() => append({ description: "", quantity: "1", price: "0", amount: "0" } as any)}
+                      >
+                        Add Item
+                      </Button>
+                    </div>
 
-                  <DialogFooter>
-                    <Button type="submit" disabled={createInvoiceMutation.isPending}>Create Invoice</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                    <div className="flex justify-end text-lg font-bold">
+                      Total: ${calculateTotal()}
+                    </div>
+
+                    <DialogFooter>
+                      <Button type="submit" disabled={createInvoiceMutation.isPending}>Create Invoice</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
