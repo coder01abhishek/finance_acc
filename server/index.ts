@@ -1,45 +1,99 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { serveStatic } from "./static";
 import { createServer } from "http";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
 
-app.use(express.json());
+declare module "http" {
+  interface IncomingMessage {
+    rawBody: unknown;
+  }
+}
+
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+
 app.use(express.urlencoded({ extended: false }));
 
+export function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      log(logLine);
+    }
+  });
+
+  next();
+});
+
 (async () => {
-  // Register API routes first
   await registerRoutes(httpServer, app);
 
-  // Global error handler
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    res.status(status).json({ message: err.message || "Internal Server Error" });
+    const message = err.message || "Internal Server Error";
+    console.error("Internal Server Error:", err);
+    if (res.headersSent) {
+      return next(err);
+    }
+    return res.status(status).json({ message });
   });
 
   if (process.env.NODE_ENV === "production") {
-    // Correct path resolution for Vercel's deployment structure
-    const publicPath = path.resolve(__dirname, "../dist");
-    app.use(express.static(publicPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(publicPath, "index.html"));
-    });
+    serveStatic(app);
+  } else {
+    const { setupVite } = await import("./vite");
+    await setupVite(httpServer, app);
   }
 
-  // Only listen locally; Vercel handles the port in production
+  // IMPORTANT: Only use httpServer.listen when NOT on Vercel (Local Development)
   if (process.env.NODE_ENV !== "production") {
-    const port = 3001;
-    httpServer.listen(port, "0.0.0.0", () => {
-      console.log(`Serving on port ${port}`);
-    });
+    const port = parseInt(process.env.PORT || "3001", 10);
+    httpServer.listen(
+      {
+        port,
+        host: "0.0.0.0",
+      },
+      () => {
+        log(`serving on port ${port}`);
+      },
+    );
   }
 })();
 
-module.exports = app;
+// Export the app for Vercel's serverless handler
+export default app;
