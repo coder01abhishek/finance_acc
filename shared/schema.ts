@@ -17,25 +17,16 @@ export const goalTypeEnum = pgEnum("goal_type", ["revenue", "expense"]);
 export const goalPeriodEnum = pgEnum("goal_period", ["monthly", "quarterly"]);
 export const currencyEnum = pgEnum("currency", ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"]);
 
-// --- ADDED SYSTEM TABLES (REQUIRED FOR AUTH) ---
-/**
- * This table is used by connect-pg-simple to store express-session data.
- * Without this, users will face 401 Unauthorized errors on live environments.
- */
-export const sessions = pgTable("session", {
-  sid: text("sid").primaryKey(),
-  sess: text("sess").notNull(),
-  expire: timestamp("expire", { precision: 6 }).notNull(),
-});
-// -----------------------------------------------
+// EXTEND USERS TABLE (Optional - handled via metadata or separate table if strict constraints needed)
+// For now, we'll assume the 'users' table from auth is sufficient for identity.
+// We'll create a separate table for app-specific user profile/roles linked to the auth user.
 
-// APP USERS
 export const appUsers = pgTable("app_users", {
   id: serial("id").primaryKey(),
-  authId: text("auth_id").unique(),
-  email: text("email").unique().notNull(), 
-  password: text("password"), 
-  name: text("name").notNull(), 
+  authId: text("auth_id").unique(), // Links to users.id from auth (null for email/password users)
+  email: text("email").unique().notNull(), // Email for login
+  password: text("password"), // Hashed password for email/password auth
+  name: text("name").notNull(), // Display name
   role: userRoleEnum("role").default("data_entry").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
 });
@@ -49,7 +40,7 @@ export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
-  isSystem: boolean("is_system").default(false).notNull(), 
+  isSystem: boolean("is_system").default(false).notNull(), // Prevent deleting critical categories
 });
 
 // ACCOUNTS
@@ -58,11 +49,11 @@ export const accounts = pgTable("accounts", {
   name: text("name").notNull(),
   type: accountTypeEnum("type").notNull(),
   openingBalance: decimal("opening_balance", { precision: 12, scale: 2 }).default("0").notNull(),
-  currentBalance: decimal("current_balance", { precision: 12, scale: 2 }).default("0").notNull(), 
+  currentBalance: decimal("current_balance", { precision: 12, scale: 2 }).default("0").notNull(), // Cached balance
   isActive: boolean("is_active").default(true).notNull(),
 });
 
-// TRANSACTIONS
+// TRANSACTIONS - Multi-currency support (INR as base)
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
@@ -84,7 +75,7 @@ export const transactions = pgTable("transactions", {
   approvedAt: timestamp("approved_at"),
 });
 
-// CLIENTS
+// CLIENTS - with preferred invoice currency
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -95,7 +86,7 @@ export const clients = pgTable("clients", {
   isActive: boolean("is_active").default(true).notNull(),
 });
 
-// INVOICES
+// INVOICES - with currency support
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
   invoiceNumber: text("invoice_number").notNull().unique(),
@@ -139,7 +130,7 @@ export const auditLogs = pgTable("audit_logs", {
   entityId: integer("entity_id").notNull(),
   userId: text("user_id").notNull(),
   timestamp: timestamp("timestamp").defaultNow(),
-  details: text("details"), 
+  details: text("details"), // JSON stringified details
 });
 
 // RELATIONS
@@ -202,7 +193,6 @@ export type InvoiceItem = typeof invoiceItems.$inferSelect;
 export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
 export type Goal = typeof goals.$inferSelect;
 export type InsertGoal = z.infer<typeof insertGoalSchema>;
-export type Session = typeof sessions.$inferSelect;
 
 // ENRICHED TYPES FOR API
 export interface InvoiceWithItems extends Invoice {
@@ -220,7 +210,7 @@ export interface DashboardStats {
   currentMonthProfitLoss: number;
   totalAvailableFunds: number;
   odLimitUsed: number;
-  odLimitRemaining: number; 
+  odLimitRemaining: number; // Assuming a fixed limit or stored somewhere
   topExpenses: { category: string; amount: number }[];
-  revenueByService: { service: string; amount: number }[]; 
+  revenueByService: { service: string; amount: number }[]; // Derived from categories or tags? User said "Revenue by Service Type" - likely Category
 }
