@@ -81,7 +81,7 @@ app.use((req, res, next) => {
   }
 
   // IMPORTANT: Only use httpServer.listen when NOT on Vercel (Local Development)
-  if (process.env.NODE_ENV !== "production") {
+  // if (process.env.NODE_ENV !== "production") {
     const port = parseInt(process.env.PORT || "3001", 10);
     httpServer.listen(
       {
@@ -92,7 +92,7 @@ app.use((req, res, next) => {
         log(`serving on port ${port}`);
       },
     );
-  }
+  // }
 })();
 
 // Export the app for Vercel's serverless handler
